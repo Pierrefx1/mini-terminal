@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+httpx
+pandas
+numpy
+apscheduler
+feedparser
+python-dotenv
+openpyxl
+lxml
+pytest

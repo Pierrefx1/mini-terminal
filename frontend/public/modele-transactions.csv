@@ -1,0 +1,6 @@
+date;type;symbol;quantity;price;amount;fees;currency;note
+15/01/2024;ACHAT;AAPL;5;185,50;;1;USD;exemple achat
+02/05/2024;DIVIDENDE;AAPL;;;1,20;;USD;montant net
+10/06/2024;SPLIT;NVDA;10;;;;USD;ratio 10-pour-1
+03/03/2025;VENTE;AAPL;2;230;;1;USD;
+05/01/2024;DEPOT;;;;5000;;EUR;facultatif
