@@ -17,6 +17,8 @@ Créé au premier lancement à partir de `.env.example`.
 | Variable | Rôle |
 |---|---|
 | `FRED_API_KEY` | Clé gratuite (fred.stlouisfed.org, rubrique API Keys). Active les indicateurs US du module Macro et les projections de la Fed. |
+| `GEMINI_API_KEY` | Clé API Google Gemini (aistudio.google.com). Active le récap marché IA de la page d'accueil. |
+| `RECAP_MODEL` | Modèle Gemini du récap (défaut `gemini-3.8-flash`). |
 | `BASE_CURRENCY` | Devise de base du portefeuille (défaut `EUR`). |
 | `BENCHMARK` | Symbole Yahoo du benchmark (défaut `URTH`, ETF MSCI World, dividendes réinvestis). |
 
@@ -39,6 +41,7 @@ Relancer après modification.
 | Macro | U.S. Treasury (courbes), BRI (taux directeurs), FRED (indicateurs US) | FRED demande la clé ; pas de PMI |
 | Forecasts | OCDE Economic Outlook, contrats Fed funds (Yahoo), FRED (SEP), calendrier (consensus) | Pas de prévisions FMI ; SEP en médianes |
 | Data | Banque mondiale, Eurostat, BRI | Banque mondiale annuelle ; Eurostat pour l'Europe seulement |
+| Récap du matin (accueil) | Google Gemini, à partir des cours, taux, calendrier, S&P 500 et news des dernières 24 h déjà collectés | Rédigé chaque jour à 7 h 30 (ou à la première ouverture si le terminal était éteint), bouton ↻ pour le refaire  ; texte généré, peut contenir des erreurs |
 | Portefeuille | Journal local + Yahoo (cours) + BCE (change) + BRI (taux sans risque) | Voir ci-dessous |
 
 Chaque panneau affiche sa source et l'heure du relevé. Si une source échoue, la dernière valeur connue est affichée avec la mention PÉRIMÉ ; sans valeur connue, l'erreur est affichée. Aucune donnée n'est simulée.

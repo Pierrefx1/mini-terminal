@@ -8,4 +8,5 @@ feedparser
 python-dotenv
 openpyxl
 lxml
+google-genai>=3.4
 pytest

@@ -5,7 +5,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 
 from . import config, db
-from .routers import calendar, crypto, data, forecasts, macro, market, news, portfolio, screener
+from .routers import calendar, crypto, data, forecasts, macro, market, news, portfolio, recap, screener
 
 log = logging.getLogger("mini-terminal")
 
@@ -25,17 +25,18 @@ async def lifespan(app: FastAPI):
     sched = BackgroundScheduler(timezone="Europe/Paris")
     sched.add_job(_safe(news.refresh), "interval", minutes=5, id="news")
     sched.add_job(_safe(calendar.refresh), "interval", minutes=60, id="calendar")
+    sched.add_job(_safe(recap.refresh), "cron", hour=recap.HOUR, minute=recap.MINUTE, id="recap", misfire_grace_time=3600)
     sched.start()
     yield
     sched.shutdown(wait=False)
 
 
 app = FastAPI(title="mini-terminal", lifespan=lifespan)
-for r in (market, macro, portfolio, news, calendar, screener, data, forecasts, crypto):
+for r in (market, macro, portfolio, news, calendar, screener, data, forecasts, crypto, recap):
     app.include_router(r.router)
 
 
 @app.get("/api/status")
 def status():
     return {"base_currency": config.BASE_CURRENCY, "benchmark": config.BENCHMARK,
-            "keys": {"fred": bool(config.FRED_API_KEY), "finnhub": bool(config.FINNHUB_API_KEY)}}
+            "keys": {"fred": bool(config.FRED_API_KEY), "finnhub": bool(config.FINNHUB_API_KEY), "gemini": bool(config.GEMINI_API_KEY)}}

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Panel, SourceTag, State } from "@/components/ui";
-import { useApi } from "@/lib/api";
+import { send, useApi } from "@/lib/api";
 import { dateOnly, num, pct, price, tone } from "@/lib/format";
 
 type Quote = { symbol: string; name?: string; price?: number; change?: number; change_pct?: number; error?: string };
@@ -14,6 +14,7 @@ type Stock = { symbol: string; name: string; sector: string; price: number | nul
 type Period = { label: string; available: boolean; twr?: number; benchmark?: number | null; excess?: number | null };
 type Summary = { empty: boolean; base: string; as_of: string; benchmark: { symbol: string }; totals: Record<string, number | null>; periods: Period[]; risk: Record<string, any>; warnings: string[];
   positions: { symbol: string; qty: number; day_pct: number | null; weight: number; value: number }[] };
+type Recap = { headline: string; mood: "risk-on" | "neutre" | "risk-off"; sections: { title: string; points: string[] }[]; watch: string[]; model: string; news_count: number };
 type Rates = { path: { month: string; implied: number }[]; current: { rate: number } | null };
 
 const GROUPS: [string, [string, string][]][] = [
@@ -33,7 +34,8 @@ function Kpi({ label, value, sub, cls = "" }: { label: string; value: string; su
 
 export default function Accueil() {
   const tick = useApi<Quote[]>("/api/market/ticker", 60_000);
-  const wl = useApi<Quote[]>("/api/market/watchlist", 60_000);
+  const recap = useApi<Recap>("/api/recap", 15 * 60_000);
+  const [busy, setBusy] = useState(false);
   const y = useApi<{ nominal: Row[] }>("/api/macro/yields");
   const pol = useApi<{ banks: Bank[] }>("/api/macro/policy");
   const cal = useApi<{ events: Ev[] }>("/api/calendar", 10 * 60_000);
@@ -61,6 +63,10 @@ export default function Accueil() {
   }, [scr.data]);
   const fedEnd = ffr.data?.path.at(-1), fedNow = ffr.data?.current?.rate;
   const d = port.data, t = d?.totals;
+  const regen = async () => {
+    setBusy(true);
+    try { await recap.reload(await send("POST", "/api/recap/refresh"), { revalidate: false }); } catch { recap.reload(); } finally { setBusy(false); }
+  };
   const per = (l: string) => d?.periods.find((p) => p.label === l && p.available);
 
   return (
@@ -133,10 +139,27 @@ export default function Accueil() {
         </tbody></table>
       </Panel>
 
-      <Panel className="col-span-3" title="Watchlist" right={<More href="/graphique" />}>
-        <State loading={wl.loading && !wl.data} error={wl.error} empty={wl.data?.length === 0 && "Vide. Ouvre un symbole (⌘K) puis « + Watchlist »."} />
-        <table><tbody>{(wl.data ?? []).map((w) => (
-          <tr key={w.symbol}><td><Link href={sym(w.symbol)} className="text-amber" title={w.name}>{w.symbol}</Link></td><td className="num">{w.error ? <span className="text-down">erreur</span> : price(w.price)}</td><td className={`num ${tone(w.change_pct)}`}>{pct(w.change_pct)}</td></tr>))}</tbody></table>
+      <Panel className="col-span-3" title="Récap du matin · IA" right={<><SourceTag env={recap.env} />
+        <button onClick={regen} disabled={busy} className="text-info hover:text-amber disabled:text-dim" title="Rédiger un nouveau récap avec les données actuelles">{busy ? "rédaction…" : "↻"}</button></>}>
+        <State loading={(recap.loading && !recap.data) || (busy && !recap.data)} error={recap.data ? null : recap.error} />
+        {recap.data && (() => { const r = recap.data; return (
+          <div className="space-y-1.5 px-2 py-1.5 leading-snug">
+            <div className="flex items-start gap-2">
+              <span className={`mt-0.5 shrink-0 px-1 text-[10px] uppercase text-black ${r.mood === "risk-on" ? "bg-up" : r.mood === "risk-off" ? "bg-down" : "bg-amber"}`}>{r.mood}</span>
+              <span className="text-fg">{r.headline}</span>
+            </div>
+            {r.sections.map((sec) => (
+              <div key={sec.title}>
+                <div className="text-[10px] uppercase text-amber">{sec.title}</div>
+                <ul className="list-none">{sec.points.map((p, i) => <li key={i} className="pl-2 -indent-2 text-dim"><span className="text-line">· </span><span className="text-fg/90">{p}</span></li>)}</ul>
+              </div>))}
+            {r.watch.length > 0 && <div>
+              <div className="text-[10px] uppercase text-amber">À surveiller aujourd&apos;hui</div>
+              <ul>{r.watch.map((w, i) => <li key={i} className="pl-2 -indent-2"><span className="text-info">▸ </span>{w}</li>)}</ul>
+            </div>}
+            {recap.env?.stale && recap.env.error && <div className="text-[10px] text-down">Dernier essai en échec : {recap.env.error}</div>}
+            <div className="text-[10px] text-dim">Rédigé par IA à partir des cours, taux, calendrier et de {r.news_count} news des dernières 24 h. Peut contenir des erreurs ; pas un conseil.</div>
+          </div>); })()}
       </Panel>
     </div>
   );
