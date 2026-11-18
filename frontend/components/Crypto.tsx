@@ -18,7 +18,7 @@ type SortKey = keyof Coin | "vol_cap" | "supply_pct";
 const WIDE = "hidden min-[1560px]:table-cell"; // colonnes secondaires, affichées seulement sur grand écran
 
 function color(v: number | null | undefined, lim: number) {
-  if (v == null) return "#2a2a2a";
+  if (v == null) return "#22344f";
   const x = Math.max(-1, Math.min(1, v / lim)), a = Math.abs(x);
   const mix = (from: number, to: number) => Math.round(from + (to - from) * a);
   return x >= 0 ? `rgb(${mix(38, 18)},${mix(42, 168)},${mix(40, 72)})` : `rgb(${mix(42, 214)},${mix(38, 48)},${mix(40, 48)})`;
@@ -54,10 +54,10 @@ export default function Crypto({ universe }: { universe: React.ReactNode }) {
   const movers = useMemo(() => { const r = coins.filter((c) => c[per] != null && (c.market_cap_rank ?? 999) <= 100).sort((a, b) => b[per]! - a[per]!); return { top: r.slice(0, 5), flop: r.slice(-5).reverse() }; }, [coins, per]);
 
   const tree = useMemo(() => ({
-    tooltip: { backgroundColor: "#161616", borderColor: "#262626", textStyle: { color: "#d6d6d6", fontSize: 11 },
+    tooltip: { backgroundColor: "#0e1828", borderColor: "#1c2b42", textStyle: { color: "#d4dbe6", fontSize: 11 },
       formatter: (p: any) => { const c: Coin = p.data.coin; return `<b>${c.symbol.toUpperCase()}</b> ${c.name} · rang ${c.market_cap_rank}<br/>Cours ${price(c.current_price)} ${C}<br/>Capitalisation ${big(c.market_cap)} ${C}<br/>${PERIODS.map(([k, l]) => `${l} ${pct(c[k])}`).join(" · ")}`; } },
     series: [{ type: "treemap", roam: false, nodeClick: false, breadcrumb: { show: false }, left: 0, right: 0, top: 0, bottom: 0, width: "100%", height: "100%",
-      label: { show: true, color: "#fff", fontSize: 11, formatter: (p: any) => `${p.name}\n${pct(p.data.coin[per], 1)}` }, itemStyle: { borderColor: "#050505", borderWidth: 1, gapWidth: 1 },
+      label: { show: true, color: "#fff", fontSize: 11, formatter: (p: any) => `${p.name}\n${pct(p.data.coin[per], 1)}` }, itemStyle: { borderColor: "#03060c", borderWidth: 1, gapWidth: 1 },
       data: filtered.filter((c) => c.market_cap).slice(0, 150).map((c) => ({ name: c.symbol.toUpperCase(), value: Math.sqrt(c.market_cap!), coin: c, itemStyle: { color: color(c[per], lim) } })) }],
   }), [filtered, per, lim, C]);
 

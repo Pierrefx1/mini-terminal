@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 
 from .. import db
-from ..cache import cached
+from ..cache import DELAYED, cached
 from ..providers.registry import prices
 
 router = APIRouter(prefix="/api/market", tags=["marché"])
@@ -16,7 +16,7 @@ def history(symbol: str, interval: str = "1d", range_: str = Query("1y", alias="
     if interval not in TTL:
         raise HTTPException(400, f"Intervalle inconnu : {interval}")
     return cached(f"hist:{symbol}:{interval}:{range_}", TTL[interval], prices.name,
-                  lambda: prices.history(symbol, interval, range_))
+                  lambda: prices.history(symbol, interval, range_), status=DELAYED)
 
 
 @router.get("/search")
@@ -27,12 +27,12 @@ def search(q: str):
 @router.get("/quotes")
 def quotes(symbols: str):
     syms = [s for s in symbols.split(",") if s]
-    return cached("quotes:" + ",".join(syms), 60, prices.name, lambda: prices.quotes(syms))
+    return cached("quotes:" + ",".join(syms), 60, prices.name, lambda: prices.quotes(syms), status=DELAYED)
 
 
 @router.get("/ticker")
 def ticker():
-    return cached("ticker", 60, prices.name, lambda: prices.quotes(TICKER))
+    return cached("ticker", 60, prices.name, lambda: prices.quotes(TICKER), status=DELAYED)
 
 
 @router.get("/watchlist")
@@ -41,7 +41,7 @@ def watchlist():
         syms = [r["symbol"] for r in c.execute("SELECT symbol FROM watchlist ORDER BY position, rowid")]
     if not syms:
         return {"data": [], "source": prices.name, "fetched_at": None, "stale": False, "error": None}
-    return cached("quotes:" + ",".join(syms), 60, prices.name, lambda: prices.quotes(syms))
+    return cached("quotes:" + ",".join(syms), 60, prices.name, lambda: prices.quotes(syms), status=DELAYED)
 
 
 @router.put("/watchlist/{symbol}")

@@ -1,7 +1,8 @@
 "use client";
 import useSWR from "swr";
 
-export type Envelope<T> = { data: T; source: string; fetched_at: string | null; stale: boolean; error: string | null };
+export type DataStatus = "LIVE" | "DELAYED" | "HISTORICAL" | "SIMULATED";
+export type Envelope<T> = { data: T; source: string; status?: DataStatus | null; fetched_at: string | null; stale: boolean; error: string | null };
 
 export class ApiError extends Error {
   source?: string;

@@ -1,38 +1,39 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-bg: #050505;
-  --color-panel: #0d0d0d;
-  --color-raised: #161616;
-  --color-line: #262626;
-  --color-fg: #d6d6d6;
-  --color-dim: #7a7a7a;
+  --color-bg: #03060c;
+  --color-panel: #08101d;
+  --color-raised: #0e1828;
+  --color-line: #1c2b42;
+  --color-fg: #d4dbe6;
+  --color-dim: #7486a0;
   --color-amber: #ffa028;
   --color-up: #1fd15f;
   --color-down: #ff4d4d;
   --color-info: #4aa8ff;
+  --color-sim: #c77dff;
   --font-mono: var(--font-geist-mono);
 }
 
 @layer base {
 html, body { height: 100%; }
 body {
-  background: #050505;
-  color: #d6d6d6;
+  background: #03060c;
+  color: #d4dbe6;
   font-family: var(--font-geist-mono), ui-monospace, Menlo, monospace;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: #2a2a2a; }
+::-webkit-scrollbar-thumb { background: #22344f; }
 ::-webkit-scrollbar-track { background: transparent; }
 table { border-collapse: collapse; width: 100%; }
-th { text-align: left; font-weight: 400; color: #7a7a7a; text-transform: uppercase; font-size: 10px; letter-spacing: .04em; position: sticky; top: 0; background: #0d0d0d; }
-th, td { padding: 3px 8px; border-bottom: 1px solid #1c1c1c; white-space: nowrap; }
+th { text-align: left; font-weight: 400; color: #7486a0; text-transform: uppercase; font-size: 10px; letter-spacing: .04em; position: sticky; top: 0; background: #08101d; }
+th, td { padding: 3px 8px; border-bottom: 1px solid #132036; white-space: nowrap; }
 td.num, th.num { text-align: right; }
-tbody tr:hover { background: #161616; }
+tbody tr:hover { background: #0e1828; }
 input, select, button { font: inherit; color: inherit; }
-input, select { background: #161616; border: 1px solid #262626; padding: 2px 6px; outline: none; }
+input, select { background: #0e1828; border: 1px solid #1c2b42; padding: 2px 6px; outline: none; }
 input:focus, select:focus { border-color: #ffa028; }
 button { cursor: pointer; }
 }

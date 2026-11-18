@@ -1,21 +1,22 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import CommandBar from "@/components/CommandBar";
+import { StatusBadge } from "@/components/ui";
 import { useApi } from "@/lib/api";
 import { pct, price, tone } from "@/lib/format";
+import { EXCHANGES, sessionState, type SessionState } from "@/lib/sessions";
 
-export const MODULES = [
-  { href: "/", label: "Accueil", code: "HOME" },
-  { href: "/graphique", label: "Graphique", code: "GP" },
-  { href: "/calendrier", label: "Calendrier", code: "ECO" },
-  { href: "/news", label: "News", code: "N" },
-  { href: "/actions", label: "Screener", code: "SCR" },
-  { href: "/macro", label: "Macro", code: "MAC" },
-  { href: "/forecasts", label: "Forecasts", code: "FCST" },
-  { href: "/data", label: "Data", code: "DATA" },
-  { href: "/portefeuille", label: "Portefeuille", code: "PORT" },
-] as const;
+/** Navigation par classe d'actifs : uniquement les modules déjà opérationnels. */
+const NAV: [group: string, items: [code: string, href: string, label: string][]][] = [
+  ["Marchés", [["WEI", "/wei", "Monde"], ["HOME", "/", "Accueil"]]],
+  ["Actions", [["SCR", "/actions", "Screener"], ["GP", "/graphique", "Graphique"]]],
+  ["Taux & macro", [["MAC", "/macro", "Macro"], ["FCST", "/forecasts", "Prévisions"], ["DATA", "/data", "Pays"]]],
+  ["Infos", [["TOP", "/news", "News"], ["ECO", "/calendrier", "Calendrier"]]],
+  ["", [["HELP", "/help", "Aide"]]],
+];
+const FLAT = NAV.flatMap(([, items]) => items);
 
 const SHORT: Record<string, string> = {
   "^GSPC": "S&P 500", "^NDX": "NASDAQ 100", "^STOXX50E": "STOXX 50", "^FCHI": "CAC 40", "^GDAXI": "DAX", "^N225": "NIKKEI",
@@ -25,18 +26,21 @@ type Quote = { symbol: string; name?: string; price?: number; change_pct?: numbe
 
 function Ticker() {
   const { data, env, error } = useApi<Quote[]>("/api/market/ticker", 60_000);
-  if (error) return <div className="border-b border-line px-2 py-1 text-down">Bandeau indisponible : {error.message}</div>;
+  if (error) return <div className="border-t border-line px-2 py-1 text-down">Bandeau indisponible : {error.message}</div>;
   const items = (data ?? []).filter((q) => !q.error);
   const row = items.map((q) => (
-    <Link key={q.symbol} href={`/graphique?s=${encodeURIComponent(q.symbol)}`} className="mx-3 inline-flex gap-2 hover:bg-raised">
+    <Link key={q.symbol} href={`/des?s=${encodeURIComponent(q.symbol)}`} className="mx-3 inline-flex gap-2 hover:bg-raised">
       <span className="text-amber">{SHORT[q.symbol] ?? q.symbol}</span>
       <span>{price(q.price)}</span>
       <span className={tone(q.change_pct)}>{pct(q.change_pct)}</span>
     </Link>
   ));
   return (
-    <div className="flex h-6 shrink-0 items-center overflow-hidden border-b border-line bg-panel" title={env ? `${env.source} · ${env.fetched_at}` : ""}>
-      {env?.stale && <span className="ml-1 shrink-0 bg-down px-1 text-[10px] text-black">PÉRIMÉ</span>}
+    <div className="flex h-6 shrink-0 items-center overflow-hidden border-t border-line bg-panel" title={env ? `${env.source} · ${env.fetched_at}` : ""}>
+      <span className="relative z-10 flex h-full shrink-0 items-center gap-1 border-r border-line bg-panel pl-1">
+        <StatusBadge status={env?.status} />
+        {env?.stale && <span className="mr-1 bg-down px-1 text-[10px] text-black">PÉRIMÉ</span>}
+      </span>
       <div className="whitespace-nowrap hover:[animation-play-state:paused]" style={{ animation: items.length ? "marquee 90s linear infinite" : undefined }}>
         {row}{row}
       </div>
@@ -44,44 +48,23 @@ function Ticker() {
   );
 }
 
-function Palette({ onClose }: { onClose: () => void }) {
-  const router = useRouter();
-  const [q, setQ] = useState("");
-  const [dq, setDq] = useState("");
-  const [sel, setSel] = useState(0);
-  useEffect(() => { const t = setTimeout(() => setDq(q.trim()), 250); return () => clearTimeout(t); }, [q]);
-  const { data: found, error } = useApi<{ symbol: string; name: string; type: string; exchange: string }[]>(dq.length >= 1 ? `/api/market/search?q=${encodeURIComponent(dq)}` : null);
-  const items = useMemo(() => {
-    const k = q.trim().toLowerCase();
-    const mods = MODULES.filter((m) => !k || m.label.toLowerCase().includes(k) || m.code.toLowerCase().startsWith(k))
-      .map((m) => ({ key: m.href, left: m.code, main: m.label, right: "module", href: m.href as string }));
-    const syms = (k ? found ?? [] : []).map((s) => ({ key: "s" + s.symbol, left: s.symbol, main: s.name, right: `${s.type ?? ""} ${s.exchange ?? ""}`, href: `/graphique?s=${encodeURIComponent(s.symbol)}` }));
-    return [...mods, ...syms];
-  }, [q, found]);
-  useEffect(() => setSel(0), [q, found]);
-  const go = (href: string) => { router.push(href); onClose(); };
+const DOT: Record<SessionState, string> = { OPEN: "bg-up", BREAK: "bg-amber", CLOSED: "bg-line" };
+
+function MarketStatus() {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => { setNow(new Date()); const t = setInterval(() => setNow(new Date()), 30_000); return () => clearInterval(t); }, []);
+  if (!now) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 pt-24" onClick={onClose}>
-      <div className="w-[640px] border border-amber bg-panel" onClick={(e) => e.stopPropagation()}>
-        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Symbole, société ou module…  (Entrée pour ouvrir, Échap pour fermer)"
-          className="w-full !border-0 !border-b !border-line !bg-black px-3 !py-2 text-sm text-amber"
-          onKeyDown={(e) => {
-            if (e.key === "Escape") onClose();
-            if (e.key === "ArrowDown") { e.preventDefault(); setSel((s) => Math.min(s + 1, items.length - 1)); }
-            if (e.key === "ArrowUp") { e.preventDefault(); setSel((s) => Math.max(s - 1, 0)); }
-            if (e.key === "Enter") { if (items[sel]) go(items[sel].href); else if (q.trim()) go(`/graphique?s=${encodeURIComponent(q.trim().toUpperCase())}`); }
-          }} />
-        <div className="max-h-96 overflow-auto">
-          {items.map((it, i) => (
-            <button key={it.key} onMouseEnter={() => setSel(i)} onClick={() => go(it.href)} className={`flex w-full gap-3 px-3 py-1 text-left ${i === sel ? "bg-amber text-black" : ""}`}>
-              <span className="w-24 shrink-0 font-bold">{it.left}</span>
-              <span className="flex-1 truncate">{it.main}</span>
-              <span className="shrink-0 opacity-60">{it.right}</span>
-            </button>
-          ))}
-          {error && <div className="px-3 py-1 text-down">Recherche indisponible : {error.message}</div>}
-        </div>
-      </div>
+    <div className="hidden shrink-0 items-center gap-3 border-l border-line px-2 min-[1100px]:flex" title="Horaires de séance réguliers ; jours fériés et séances écourtées non pris en compte.">
+      {EXCHANGES.map((ex) => {
+        const { state, local } = sessionState(ex, now);
+        return (
+          <span key={ex.code} className="flex items-center gap-1" title={`${ex.city} · ${local} heure locale · ${state === "OPEN" ? "séance en cours" : state === "BREAK" ? "pause de mi-séance" : "fermé"}`}>
+            <span className={`inline-block h-2 w-2 ${DOT[state]}`} />
+            <span className={state === "OPEN" ? "text-fg" : "text-dim"}>{ex.code}</span>
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -92,40 +75,47 @@ function Clock() {
     const f = () => setNow(new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date()));
     f(); const t = setInterval(f, 1000); return () => clearInterval(t);
   }, []);
-  return <span className="text-dim">{now} · Paris</span>;
+  return <span className="text-dim">{now} Paris</span>;
 }
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const routerRef = useRef(router); routerRef.current = router;
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setOpen((o) => !o); }
       const m = /^Digit([1-9])$/.exec(e.code);
-      if (e.altKey && m) { e.preventDefault(); routerRef.current.push(MODULES[+m[1] - 1].href); }
+      if (e.altKey && m && FLAT[+m[1] - 1]) { e.preventDefault(); routerRef.current.push(FLAT[+m[1] - 1][1]); }
     };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, []);
+  let n = 0;
   return (
     <div className="flex h-full flex-col">
-      <nav className="flex h-7 shrink-0 items-stretch overflow-hidden whitespace-nowrap border-b border-line bg-black">
-        <span className="flex shrink-0 items-center bg-amber px-2 font-bold text-black">MINI-TERMINAL</span>
-        {MODULES.map((m, i) => {
-          const active = m.href === "/" ? path === "/" : path.startsWith(m.href);
-          return (
-            <Link key={m.href} href={m.href} title={`⌥${i + 1}`} className={`flex shrink-0 items-center gap-1 border-r border-line px-2 xl:px-3 ${active ? "bg-raised text-amber" : "text-fg hover:bg-raised"}`}>
-              <span className="text-[10px] text-dim">{i + 1}</span>{m.label}
-            </Link>
-          );
-        })}
-        <button onClick={() => setOpen(true)} className="ml-auto flex shrink-0 items-center gap-2 border-l border-line px-3 text-dim hover:text-amber"><span className="hidden min-[1400px]:inline">Rechercher</span> <kbd className="border border-line px-1">⌘K</kbd></button>
-        <span className="hidden shrink-0 items-center border-l border-line px-3 min-[1180px]:flex"><Clock /></span>
+      <header className="flex h-8 shrink-0 items-center gap-2 border-b border-line bg-black pr-2">
+        <Link href="/wei" className="flex h-full shrink-0 items-center bg-amber px-2 font-bold tracking-wider text-black">MARKET TERMINAL</Link>
+        <CommandBar />
+        <MarketStatus />
+        <span className="hidden shrink-0 border-l border-line pl-2 min-[800px]:inline"><Clock /></span>
+      </header>
+      <nav className="flex h-6 shrink-0 items-stretch overflow-x-auto whitespace-nowrap border-b border-line bg-panel">
+        {NAV.map(([group, items]) => (
+          <div key={group || "aide"} className="flex items-stretch border-r border-line">
+            {group && <span className="flex items-center px-2 text-[10px] uppercase text-dim">{group}</span>}
+            {items.map(([code, href, label]) => {
+              const i = ++n;
+              const active = href === "/" ? path === "/" : path.startsWith(href);
+              return (
+                <Link key={code} href={href} title={`${label} · ⌥${i}`} className={`flex items-center gap-1 px-2 ${active ? "bg-raised text-amber" : "hover:bg-raised"}`}>
+                  <span className={active ? "text-amber" : "text-fg"}>{code}</span><span className="hidden text-dim xl:inline">{label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
-      <Ticker />
       <main className="min-h-0 flex-1 overflow-hidden p-1">{children}</main>
-      {open && <Palette onClose={() => setOpen(false)} />}
+      <Ticker />
     </div>
   );
 }

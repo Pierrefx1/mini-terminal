@@ -15,7 +15,7 @@ const PERIODS: [PerfKey, string, number][] = [["d1", "1J", 3], ["w1", "1S", 7], 
 
 /** Rouge -> neutre -> vert, saturé à ±lim %. */
 function color(v: number | null | undefined, lim: number) {
-  if (v == null) return "#2a2a2a";
+  if (v == null) return "#22344f";
   const x = Math.max(-1, Math.min(1, v / lim)), a = Math.abs(x);
   const mix = (from: number, to: number) => Math.round(from + (to - from) * a);
   return x >= 0 ? `rgb(${mix(38, 18)},${mix(42, 168)},${mix(40, 72)})` : `rgb(${mix(42, 214)},${mix(38, 48)},${mix(40, 48)})`;
@@ -53,14 +53,14 @@ function Actions({ u, universe }: { u: string; universe: React.ReactNode }) {
       (groups.get(r.sector) ?? groups.set(r.sector, []).get(r.sector)!).push({ name: r.symbol, value: v, row: r, itemStyle: { color: color(r[per], lim) } });
     }
     return {
-      tooltip: { backgroundColor: "#161616", borderColor: "#262626", textStyle: { color: "#d6d6d6", fontSize: 11 },
+      tooltip: { backgroundColor: "#0e1828", borderColor: "#1c2b42", textStyle: { color: "#d4dbe6", fontSize: 11 },
         formatter: (p: any) => { const r: Row | undefined = p.data.row; return r ? `<b>${r.symbol}</b> ${r.name}<br/>${r.sector} · ${r.country}<br/>Cours ${price(r.price)} ${r.currency ?? ""}<br/>${PERIODS.map(([k, l]) => `${l} ${pct(r[k])}`).join(" · ")}${r.weight != null ? `<br/>Poids dans l'indice ${num(r.weight, 2)} %` : ""}` : p.name; } },
       series: [{
         type: "treemap", roam: false, nodeClick: false, breadcrumb: { show: false }, left: 0, right: 0, top: 0, bottom: 0, width: "100%", height: "100%",
         label: { show: true, color: "#fff", fontSize: 11, formatter: (p: any) => (p.data.row ? `${p.name.split(".")[0]}\n${pct(p.data.row[per], 1)}` : p.name) },
-        upperLabel: { show: true, height: 16, color: "#ffa028", fontSize: 10, backgroundColor: "#0d0d0d" },
-        itemStyle: { borderColor: "#050505", borderWidth: 1, gapWidth: 1 },
-        levels: [{ itemStyle: { borderWidth: 2, borderColor: "#050505", gapWidth: 2 } }, { itemStyle: { borderColor: "#0d0d0d", gapWidth: 1 } }],
+        upperLabel: { show: true, height: 16, color: "#ffa028", fontSize: 10, backgroundColor: "#08101d" },
+        itemStyle: { borderColor: "#03060c", borderWidth: 1, gapWidth: 1 },
+        levels: [{ itemStyle: { borderWidth: 2, borderColor: "#03060c", gapWidth: 2 } }, { itemStyle: { borderColor: "#08101d", gapWidth: 1 } }],
         data: [...groups.entries()].map(([name, children]) => ({ name, children })).sort((a, b) => b.children.reduce((s, c) => s + c.value, 0) - a.children.reduce((s, c) => s + c.value, 0)),
       }],
     };

@@ -1,5 +1,5 @@
 "use client";
-import type { Envelope, ApiError } from "@/lib/api";
+import type { Envelope, ApiError, DataStatus } from "@/lib/api";
 import { dateTime } from "@/lib/format";
 
 export function Panel({ title, right, children, className = "" }: { title?: React.ReactNode; right?: React.ReactNode; children: React.ReactNode; className?: string }) {
@@ -16,12 +16,26 @@ export function Panel({ title, right, children, className = "" }: { title?: Reac
   );
 }
 
-/** Source + horodatage de la donnée, avec signalement d'une donnée périmée. */
+const STATUS: Record<DataStatus, [string, string]> = {
+  LIVE: ["border-up text-up", "Temps réel"],
+  DELAYED: ["border-amber text-amber", "Cours différés : délai variable selon la place et la source"],
+  HISTORICAL: ["border-info text-info", "Données historiques ou de fin de période, pas un cours de marché"],
+  SIMULATED: ["border-sim text-sim", "Données simulées, jamais des cours réels"],
+};
+
+export function StatusBadge({ status }: { status?: DataStatus | null }) {
+  if (!status) return null;
+  const [cls, title] = STATUS[status];
+  return <span className={`mr-1 border px-1 text-[9px] leading-[12px] ${cls}`} title={title}>{status}</span>;
+}
+
+/** Source + nature (LIVE, DELAYED…) + horodatage de la donnée, avec signalement d'une donnée périmée. */
 export function SourceTag({ env }: { env?: Envelope<unknown> }) {
   if (!env) return null;
   return (
     <span className="text-[10px] text-dim" title={env.error ?? undefined}>
       {env.stale && <span className="mr-1 bg-down px-1 text-black">PÉRIMÉ</span>}
+      <StatusBadge status={env.status} />
       {env.source}{env.fetched_at ? ` · ${dateTime(env.fetched_at)}` : ""}
     </span>
   );
@@ -48,6 +62,28 @@ export function Seg<T extends string>({ value, options, onChange }: { value: T; 
           <button key={v} onClick={() => onChange(v)} className={`px-2 py-0.5 ${v === value ? "bg-amber text-black" : "text-dim hover:text-fg"}`}>{label}</button>
         );
       })}
+    </span>
+  );
+}
+
+/** Mini-courbe SVG : vert si la série finit au-dessus de son premier point, rouge sinon. */
+export function Spark({ values, width = 90, height = 18, fluid = false }: { values?: number[]; width?: number; height?: number; fluid?: boolean }) {
+  if (!values || values.length < 2) return null;
+  const lo = Math.min(...values), hi = Math.max(...values), span = hi - lo || 1;
+  const pts = values.map((v, i) => `${((i / (values.length - 1)) * width).toFixed(1)},${(height - ((v - lo) / span) * (height - 2) - 1).toFixed(1)}`).join(" ");
+  return (
+    <svg {...(fluid ? { viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: "none", className: "block h-full w-full" } : { width, height, className: "inline-block align-middle" })} aria-hidden>
+      <polyline points={pts} fill="none" strokeWidth="1" vectorEffect="non-scaling-stroke" className={values.at(-1)! >= values[0] ? "stroke-up" : "stroke-down"} />
+    </svg>
+  );
+}
+
+/** Position du dernier cours dans la fourchette plus bas / plus haut (0 à 100). */
+export function RangeBar({ pos, width = 70 }: { pos?: number | null; width?: number }) {
+  if (pos == null) return <span className="text-dim">–</span>;
+  return (
+    <span className="relative inline-block h-1.5 bg-line align-middle" style={{ width }} title={`${Math.round(pos)} % de la fourchette`}>
+      <span className="absolute top-[-2px] h-2.5 w-0.5 bg-amber" style={{ left: `calc(${Math.min(100, Math.max(0, pos))}% - 1px)` }} />
     </span>
   );
 }

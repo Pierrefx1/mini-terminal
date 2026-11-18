@@ -6,7 +6,7 @@ import "./globals.css";
 
 const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
-export const metadata: Metadata = { title: "mini-terminal", description: "Terminal financier personnel" };
+export const metadata: Metadata = { title: "MARKET TERMINAL", description: "Terminal de marché : données identifiées par leur source, commandes, analyse" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

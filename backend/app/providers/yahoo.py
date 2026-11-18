@@ -62,6 +62,21 @@ class Yahoo:
             out["splits"] = sorted(({"time": s["date"], "ratio": s["numerator"] / s["denominator"]} for s in ev.get("splits", {}).values()), key=lambda x: x["time"])
         return out
 
+    def describe(self, symbol: str) -> dict:
+        """Fiche instrument : métadonnées de la place + un an de cours quotidiens."""
+        r = self._chart(symbol, "1d", "1y")
+        m, q = r["meta"], r["indicators"]["quote"][0]
+        candles = [{"time": t, "open": q["open"][i], "high": q["high"][i], "low": q["low"][i], "close": q["close"][i], "volume": q["volume"][i] or 0}
+                   for i, t in enumerate(r.get("timestamp") or []) if None not in (q["open"][i], q["high"][i], q["low"][i], q["close"][i])]
+        if not candles:
+            raise SourceError(f"Yahoo : aucun cours pour « {symbol} »")
+        return {"symbol": m["symbol"], "name": m.get("longName") or m.get("shortName") or m["symbol"],
+                "currency": m.get("currency"), "exchange": m.get("fullExchangeName") or m.get("exchangeName"),
+                "type": m.get("instrumentType"), "tz": m.get("exchangeTimezoneName"), "gmtoffset": m.get("gmtoffset", 0),
+                "price": m.get("regularMarketPrice"), "time": m.get("regularMarketTime"),
+                "day_high": m.get("regularMarketDayHigh"), "day_low": m.get("regularMarketDayLow"),
+                "volume": m.get("regularMarketVolume"), "candles": candles}
+
     def quote(self, symbol: str) -> dict:
         r = self._chart(symbol, "1d", "5d")
         m = r["meta"]

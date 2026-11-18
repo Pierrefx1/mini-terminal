@@ -6,18 +6,6 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS cache (
   key TEXT PRIMARY KEY, payload TEXT NOT NULL, source TEXT NOT NULL, fetched_at TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS transactions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  date TEXT NOT NULL,            -- AAAA-MM-JJ
-  type TEXT NOT NULL,            -- BUY SELL DIVIDEND DEPOSIT WITHDRAWAL FEE SPLIT
-  symbol TEXT,                   -- symbole Yahoo, vide pour les flux de trésorerie
-  quantity TEXT,                 -- Decimal en texte (SPLIT : ratio, ex. 4 pour 4-pour-1)
-  price TEXT,                    -- prix unitaire dans la devise de la ligne
-  amount TEXT,                   -- montant brut pour DIVIDEND/DEPOSIT/WITHDRAWAL/FEE
-  fees TEXT NOT NULL DEFAULT '0',
-  currency TEXT NOT NULL,
-  note TEXT NOT NULL DEFAULT ''
-);
 CREATE TABLE IF NOT EXISTS watchlist (
   symbol TEXT PRIMARY KEY, position INTEGER NOT NULL DEFAULT 0
 );

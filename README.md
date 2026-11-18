@@ -1,6 +1,10 @@
-# mini-terminal
+# MARKET TERMINAL
 
-Terminal financier personnel, en local : graphique, calendrier économique, news, heatmap et screener actions, macro, prévisions, données par pays, portefeuille.
+Terminal de marché en local, inspiré des terminaux professionnels et utilisable sans compte. On y navigue par commandes (`AAPL US Equity DES`, `BRENT GP`, `WEI`…). Chaque donnée affiche sa source, sa nature (LIVE, DELAYED, HISTORICAL, SIMULATED) et son heure de relevé.
+
+Modules : vue globale des marchés (WEI), fiche instrument (DES), graphique (GP), actualités, calendrier économique, screener et carte des actions, macro, prévisions, données par pays, récap du matin rédigé par IA.
+
+Documentation : [architecture](docs/ARCHITECTURE.md) · [cahier des charges du MVP et feuille de route](docs/MVP.md)
 
 ## Lancer
 
@@ -19,21 +23,31 @@ Créé au premier lancement à partir de `.env.example`.
 | `FRED_API_KEY` | Clé gratuite (fred.stlouisfed.org, rubrique API Keys). Active les indicateurs US du module Macro et les projections de la Fed. |
 | `GEMINI_API_KEY` | Clé API Google Gemini (aistudio.google.com). Active le récap marché IA de la page d'accueil. |
 | `RECAP_MODEL` | Modèle Gemini du récap (défaut `gemini-3.8-flash`). |
-| `BASE_CURRENCY` | Devise de base du portefeuille (défaut `EUR`). |
-| `BENCHMARK` | Symbole Yahoo du benchmark (défaut `URTH`, ETF MSCI World, dividendes réinvestis). |
 
 Relancer après modification.
 
-## Clavier
+## Commandes
 
-- `⌘K` : recherche d'un symbole ou d'un module
-- `⌥1` à `⌥9` : changer d'onglet (1 = page d'accueil)
+Syntaxe : `<instrument> <FONCTION>` ou `<FONCTION> [instrument]`, puis Entrée. La liste complète est dans le terminal (commande `HELP`).
+
+| Exemple | Effet |
+|---|---|
+| `WEI` | Vue globale : indices mondiaux, volatilité, carte des places, largeur de marché |
+| `AAPL US Equity DES` | Fiche de l'action Apple |
+| `MC FP Equity DES` | Fiche LVMH (Euronext Paris) |
+| `EURUSD Curncy DES` | Fiche de la paire EUR/USD |
+| `BRENT GP` | Graphique du Brent |
+| `USGG10YR Index GP` | Graphique du taux US à 10 ans |
+| `NEWS NVDA` | Actualités de Nvidia |
+| `TOP`, `ECO` | Actualités principales, calendrier économique |
+
+Clavier : `⌘K` ou `/` pour la barre de commandes (taper une lettre n'importe où fonctionne aussi), `↑ ↓` et `Tab` pour les suggestions, champ vide pour l'historique, `⌥1` à `⌥9` pour les onglets.
 
 ## Sources et limites
 
 | Module | Source | Limites |
 |---|---|---|
-| Graphique, bandeau, watchlist | Yahoo Finance | Cours différés, API non officielle |
+| WEI, DES, graphique, bandeau, watchlist | Yahoo Finance | Cours différés (DELAYED), API non officielle ; MSCI World approché par l'ETF URTH |
 | Calendrier | Export hebdo ForexFactory | Semaine en cours ; pas de chiffre réel (déduit du « précédent » de la publication suivante) ; l'historique se constitue localement |
 | News | 13 flux RSS (CNBC, MarketWatch, Fed, BCE, BoE, BEA, BBC, Guardian, Le Monde, Le Figaro, France 24) + Yahoo par symbole | 45 jours conservés |
 | Screener, actions | Wikipedia (composition, secteurs), SPDR (poids S&P 500), Yahoo (cours) | Pas de capitalisation ni de PER ; rendement et volume recalculés une fois par jour |
@@ -42,24 +56,18 @@ Relancer après modification.
 | Forecasts | OCDE Economic Outlook, contrats Fed funds (Yahoo), FRED (SEP), calendrier (consensus) | Pas de prévisions FMI ; SEP en médianes |
 | Data | Banque mondiale, Eurostat, BRI | Banque mondiale annuelle ; Eurostat pour l'Europe seulement |
 | Récap du matin (accueil) | Google Gemini, à partir des cours, taux, calendrier, S&P 500 et news des dernières 24 h déjà collectés | Rédigé chaque jour à 7 h 30 (ou à la première ouverture si le terminal était éteint), bouton ↻ pour le refaire  ; texte généré, peut contenir des erreurs |
-| Portefeuille | Journal local + Yahoo (cours) + BCE (change) + BRI (taux sans risque) | Voir ci-dessous |
 
 Chaque panneau affiche sa source et l'heure du relevé. Si une source échoue, la dernière valeur connue est affichée avec la mention PÉRIMÉ ; sans valeur connue, l'erreur est affichée. Aucune donnée n'est simulée.
 
-## Portefeuille
+## Architecture et tests
 
-Le journal de transactions est la seule source de vérité : achat, vente, dividende, dépôt, retrait, frais, split. Saisie dans l'onglet Journal ou import CSV (modèle téléchargeable dans l'interface ; l'import est annulé en entier à la moindre ligne invalide).
+- `backend/` : FastAPI. `app/providers/` contient un adaptateur par source, branché dans `registry.py` ; `app/cache.py` gère durée de vie, repli et enveloppe source/statut/heure ; `app/analytics.py` les calculs de marché.
+- `frontend/` : Next.js. Le navigateur n'appelle que `/api`, relayé vers le backend local. `lib/commands.ts` contient l'analyseur de commandes.
+- `data/terminal.db` : base SQLite locale (watchlist, cache, historique news et calendrier).
 
-- Sans dépôt ni retrait dans le journal, le portefeuille est suivi « titres seuls » : chaque achat compte comme un apport, chaque vente ou dividende comme un retrait. Avec au moins un dépôt, les liquidités sont suivies.
-- Chaque transaction est convertie au taux de référence BCE de son jour.
-- Les splits doivent figurer dans le journal ; un split vu par Yahoo et absent du journal déclenche un avertissement.
-- Les méthodes de calcul (TWR, MWR, alpha, bêta, etc.) sont affichées à côté de chaque mesure.
-- Les montants du journal sont calculés en décimal exact ; les séries quotidiennes et les statistiques en virgule flottante.
+Détails et choix techniques : [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-Tests des calculs : `cd backend && .venv/bin/python -m pytest`
-
-## Architecture
-
-- `backend/` : FastAPI. `app/providers/` contient un adaptateur par source, branché dans `registry.py` ; `app/cache.py` gère durée de vie et repli ; `app/portfolio/` le moteur de calcul.
-- `frontend/` : Next.js. Le navigateur n'appelle que `/api`, relayé vers le backend local.
-- `data/terminal.db` : base SQLite (journal, watchlist, cache, historique news et calendrier). À sauvegarder pour conserver le journal.
+```sh
+cd backend && .venv/bin/python -m pytest   # calculs de marché
+cd frontend && npm test                    # commandes, statut des places
+```

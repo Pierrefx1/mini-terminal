@@ -29,7 +29,7 @@ export default function Forecasts() {
     return lineOption([{ name: "Réalisé", data: actual.map((o) => [String(o[0]), o[1]] as [string, number]) }, { name: "Prévision OCDE", data: fc.map((o) => [String(o[0]), o[1]] as [string, number]), dashed: true, color: PALETTE[1] }], { unit: row.unit === "%" ? " %" : "" });
   }, [row, y0]);
   const path = useMemo(() => rates.data && lineOption([{ name: "Taux Fed funds moyen anticipé", data: rates.data.path.map((p) => [p.month, p.implied] as [string, number]) },
-    ...(rates.data.current ? [{ name: `Taux actuel (${num(rates.data.current.rate, 3)} %)`, data: rates.data.path.map((p) => [p.month, rates.data!.current!.rate] as [string, number]), dashed: true, color: "#7a7a7a" }] : [])],
+    ...(rates.data.current ? [{ name: `Taux actuel (${num(rates.data.current.rate, 3)} %)`, data: rates.data.path.map((p) => [p.month, rates.data!.current!.rate] as [string, number]), dashed: true, color: "#7486a0" }] : [])],
     { category: rates.data.path.map((p) => p.month), unit: " %", decimals: 3 }), [rates.data]);
   const upcoming = useMemo(() => (cal.data?.events ?? []).filter((e) => new Date(e.time).getTime() > Date.now() && e.forecast && e.impact !== "Low"), [cal.data]);
 

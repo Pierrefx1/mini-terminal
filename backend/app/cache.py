@@ -34,31 +34,35 @@ def _read(key: str):
         return c.execute("SELECT payload, source, fetched_at FROM cache WHERE key=?", (key,)).fetchone()
 
 
-def _envelope(row, stale=False, error=None) -> dict:
-    return {"data": json.loads(row["payload"]), "source": row["source"],
+# Nature de la donnée, affichée à côté de la source. Jamais « LIVE » pour une source différée.
+LIVE, DELAYED, HISTORICAL, SIMULATED = "LIVE", "DELAYED", "HISTORICAL", "SIMULATED"
+
+
+def _envelope(row, stale=False, error=None, status=None) -> dict:
+    return {"data": json.loads(row["payload"]), "source": row["source"], "status": status,
             "fetched_at": row["fetched_at"], "stale": stale, "error": error}
 
 
-def cached(key: str, ttl: int, source: str, fetch: Callable[[], Any], force: bool = False) -> dict:
+def cached(key: str, ttl: int, source: str, fetch: Callable[[], Any], force: bool = False, status: str | None = None) -> dict:
     row = _read(key)
     if row and not force:
         age = (_now() - datetime.fromisoformat(row["fetched_at"])).total_seconds()
         if age < ttl:
-            return _envelope(row)
+            return _envelope(row, status=status)
     with _lock(key):
         if not force:
             again = _read(key)
             if again and (not row or again["fetched_at"] != row["fetched_at"]):
-                return _envelope(again)
+                return _envelope(again, status=status)
         try:
             data = fetch()
         except Exception as e:  # repli sur la dernière valeur connue
             msg = str(e) if isinstance(e, SourceError) else f"{type(e).__name__}: {e}"
             if row:
-                return _envelope(row, stale=True, error=msg)
+                return _envelope(row, stale=True, error=msg, status=status)
             raise HTTPException(502, detail={"source": source, "error": msg})
         ts = _now().isoformat(timespec="seconds")
         with db.conn() as c:
             c.execute("INSERT OR REPLACE INTO cache VALUES (?,?,?,?)",
                       (key, json.dumps(data, allow_nan=False, default=str), source, ts))
-        return {"data": data, "source": source, "fetched_at": ts, "stale": False, "error": None}
+        return {"data": data, "source": source, "status": status, "fetched_at": ts, "stale": False, "error": None}

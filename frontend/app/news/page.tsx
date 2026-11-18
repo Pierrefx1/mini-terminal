@@ -1,4 +1,5 @@
 "use client";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Panel, Seg, SourceTag, State } from "@/components/ui";
 import { useApi } from "@/lib/api";
@@ -18,6 +19,8 @@ export default function News() {
   const [country, setCountry] = useState("");
   const [q, setQ] = useState(""); const [dq, setDq] = useState("");
   const [sym, setSym] = useState(""); const [symbol, setSymbol] = useState("");
+  const urlSymbol = (useSearchParams().get("s") ?? "").toUpperCase();
+  useEffect(() => { setSymbol(urlSymbol); setSym(urlSymbol); }, [urlSymbol]); // NEWS <instrument>
   useEffect(() => { const t = setTimeout(() => setDq(q.trim()), 300); return () => clearTimeout(t); }, [q]);
   const qs = new URLSearchParams({ ...(theme && { theme }), ...(country && { country }), ...(dq && { q: dq }), ...(symbol && { symbol }) }).toString();
   const { data, env, error, loading } = useApi<{ items: Item[]; themes: string[] }>(`/api/news?${qs}`, 2 * 60_000);

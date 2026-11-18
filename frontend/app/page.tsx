@@ -11,9 +11,6 @@ type Bank = { area: string; bank: string; rate: number; previous: number | null;
 type Ev = { id: string; title: string; country: string; time: string; impact: string; forecast: string; previous: string };
 type NewsItem = { id: string; title: string; link: string; source: string; published: string; theme: string };
 type Stock = { symbol: string; name: string; sector: string; price: number | null; d1?: number | null };
-type Period = { label: string; available: boolean; twr?: number; benchmark?: number | null; excess?: number | null };
-type Summary = { empty: boolean; base: string; as_of: string; benchmark: { symbol: string }; totals: Record<string, number | null>; periods: Period[]; risk: Record<string, any>; warnings: string[];
-  positions: { symbol: string; qty: number; day_pct: number | null; weight: number; value: number }[] };
 type Recap = { headline: string; mood: "risk-on" | "neutre" | "risk-off"; sections: { title: string; points: string[] }[]; watch: string[]; model: string; news_count: number };
 type Rates = { path: { month: string; implied: number }[]; current: { rate: number } | null };
 
@@ -24,13 +21,8 @@ const GROUPS: [string, [string, string][]][] = [
 const ZONES: Record<string, string> = { USD: "US", EUR: "EUR", GBP: "UK", JPY: "JP", CNY: "CN", CAD: "CA", AUD: "AU", NZD: "NZ", CHF: "CH" };
 const dt = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", weekday: "short", hour: "2-digit", minute: "2-digit" });
 const hm = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" });
-const P = (v: number | null | undefined) => pct(v == null ? null : v * 100);
 const sym = (s: string) => `/graphique?s=${encodeURIComponent(s)}`;
 const More = ({ href }: { href: string }) => <Link href={href} className="text-info hover:text-amber">ouvrir →</Link>;
-
-function Kpi({ label, value, sub, cls = "" }: { label: string; value: string; sub?: string; cls?: string }) {
-  return <div className="border-b border-r border-line px-2 py-1"><div className="text-[10px] uppercase text-dim">{label}</div><div className={`text-base ${cls}`}>{value}</div>{sub && <div className="text-[10px] text-dim">{sub}</div>}</div>;
-}
 
 export default function Accueil() {
   const tick = useApi<Quote[]>("/api/market/ticker", 60_000);
@@ -41,7 +33,6 @@ export default function Accueil() {
   const cal = useApi<{ events: Ev[] }>("/api/calendar", 10 * 60_000);
   const news = useApi<{ items: NewsItem[] }>("/api/news?limit=14", 2 * 60_000);
   const scr = useApi<{ rows: Stock[] }>("/api/screener?universe_id=sp500", 5 * 60_000);
-  const port = useApi<Summary>("/api/portfolio/summary", 5 * 60_000);
   const ffr = useApi<Rates>("/api/forecasts/rates", 30 * 60_000);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 60_000); return () => clearInterval(t); }, []);
@@ -62,34 +53,13 @@ export default function Accueil() {
     return { top: r.slice(0, 6), flop: r.slice(-6).reverse(), up, total: r.length };
   }, [scr.data]);
   const fedEnd = ffr.data?.path.at(-1), fedNow = ffr.data?.current?.rate;
-  const d = port.data, t = d?.totals;
   const regen = async () => {
     setBusy(true);
     try { await recap.reload(await send("POST", "/api/recap/refresh"), { revalidate: false }); } catch { recap.reload(); } finally { setBusy(false); }
   };
-  const per = (l: string) => d?.periods.find((p) => p.label === l && p.available);
 
   return (
-    <div className="grid h-full grid-cols-12 grid-rows-[auto_minmax(0,1fr)_minmax(0,1fr)] gap-1 overflow-auto">
-      <Panel className="col-span-12" title="Portefeuille" right={<><SourceTag env={port.env} /><More href="/portefeuille" /></>}>
-        {port.error ? <State error={port.error} /> : !d ? <State loading /> : d.empty ? (
-          <div className="p-2 text-dim">Journal vide. <Link href="/portefeuille" className="text-info underline">Saisir ou importer mes transactions</Link> pour voir ici valeur, performance et alpha.</div>
-        ) : (<>
-          <div className="grid grid-cols-8">
-            <Kpi label={`Valeur au ${dateOnly(d.as_of)}`} value={`${num(t!.value, 2)} ${d.base}`} />
-            <Kpi label="Jour" value={P(t!.day_pct)} sub={`${num(t!.day_change, 2)} ${d.base}`} cls={tone(t!.day_pct)} />
-            <Kpi label="Performance totale" value={P(t!.total_pct)} sub={`${num(t!.total_pnl, 2)} ${d.base} · latent ${num(t!.unrealized, 0)} · réalisé ${num(t!.realized, 0)}`} cls={tone(t!.total_pnl)} />
-            <Kpi label="YTD (TWR)" value={P(per("YTD")?.twr)} sub={`${d.benchmark.symbol} ${P(per("YTD")?.benchmark)}`} cls={tone(per("YTD")?.twr)} />
-            <Kpi label="1 an (TWR)" value={P(per("1A")?.twr)} sub={`${d.benchmark.symbol} ${P(per("1A")?.benchmark)}`} cls={tone(per("1A")?.twr)} />
-            <Kpi label="Alpha annualisé" value={d.risk.alpha == null ? "–" : P(d.risk.alpha)} sub={`bêta ${num(d.risk.beta, 2)} · depuis l'origine`} cls={tone(d.risk.alpha)} />
-            <Kpi label="Volatilité · Sharpe" value={d.risk.volatility == null ? "–" : `${num(d.risk.volatility * 100, 1)} % · ${num(d.risk.sharpe, 2)}`} sub={`drawdown max ${P(d.risk.max_drawdown)}`} />
-            <div className="border-b border-line px-2 py-1"><div className="text-[10px] uppercase text-dim">Lignes du jour</div>
-              {d.positions.filter((p) => p.qty).slice(0, 3).map((p) => <div key={p.symbol} className="flex justify-between"><Link href={sym(p.symbol)} className="text-amber">{p.symbol}</Link><span className={tone(p.day_pct)}>{P(p.day_pct)}</span></div>)}</div>
-          </div>
-          {d.warnings.map((w) => <div key={w} className="px-2 py-0.5 text-down">⚠ {w}</div>)}
-        </>)}
-      </Panel>
-
+    <div className="grid h-full grid-cols-12 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-1 overflow-auto">
       <Panel className="col-span-3" title="Marchés" right={<SourceTag env={tick.env} />}>
         <State loading={tick.loading && !tick.data} error={tick.error} />
         <table><tbody>{GROUPS.map(([g, list]) => [

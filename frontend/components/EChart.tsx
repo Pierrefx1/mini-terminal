@@ -2,7 +2,7 @@
 import * as echarts from "echarts";
 import { useEffect, useRef } from "react";
 
-const AXIS = { axisLine: { lineStyle: { color: "#262626" } }, axisLabel: { color: "#7a7a7a", fontSize: 10 }, splitLine: { lineStyle: { color: "#161616" } } };
+const AXIS = { axisLine: { lineStyle: { color: "#1c2b42" } }, axisLabel: { color: "#7486a0", fontSize: 10 }, splitLine: { lineStyle: { color: "#0e1828" } } };
 export const PALETTE = ["#ffa028", "#4aa8ff", "#c77dff", "#1fd15f", "#ff4d9a", "#e6e600", "#9aa0a6", "#00d1c1"];
 
 export default function EChart({ option, onClick, className = "h-full w-full" }: { option: any; onClick?: (p: any) => void; className?: string }) {
@@ -30,8 +30,8 @@ export function lineOption(lines: Line[], o: { category?: string[]; unit?: strin
   const fmt = (v: number) => (v == null ? "–" : v.toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d }) + (o.unit ?? ""));
   return {
     grid: { left: 8, right: 12, top: o.legend === false ? 10 : 26, bottom: 6, containLabel: true },
-    legend: { show: o.legend !== false, top: 0, left: 0, textStyle: { color: "#d6d6d6", fontSize: 10 }, itemWidth: 12, itemHeight: 2, icon: "rect" },
-    tooltip: { trigger: "axis", backgroundColor: "#161616", borderColor: "#262626", textStyle: { color: "#d6d6d6", fontSize: 11 }, valueFormatter: fmt, axisPointer: { lineStyle: { color: "#5a5a5a" } } },
+    legend: { show: o.legend !== false, top: 0, left: 0, textStyle: { color: "#d4dbe6", fontSize: 10 }, itemWidth: 12, itemHeight: 2, icon: "rect" },
+    tooltip: { trigger: "axis", backgroundColor: "#0e1828", borderColor: "#1c2b42", textStyle: { color: "#d4dbe6", fontSize: 11 }, valueFormatter: fmt, axisPointer: { lineStyle: { color: "#4d5d75" } } },
     xAxis: o.category ? { type: "category", data: o.category, ...AXIS, splitLine: { show: false } } : { type: "time", ...AXIS, splitLine: { show: false } },
     yAxis: { type: "value", scale: !o.zero, ...AXIS, axisLabel: { ...AXIS.axisLabel, formatter: (v: number) => fmt(v) } },
     series: lines.map((l) => ({

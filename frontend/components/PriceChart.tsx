@@ -39,11 +39,11 @@ export default function PriceChart({ symbol, interval, range, compare, opts, onM
     const comparing = data.length > 1;
     const chart = createChart(el.current, {
       autoSize: true,
-      layout: { background: { type: ColorType.Solid, color: "#0d0d0d" }, textColor: "#7a7a7a", fontFamily: "var(--font-geist-mono), monospace", fontSize: 11, panes: { separatorColor: "#262626" } },
-      grid: { vertLines: { color: "#161616" }, horzLines: { color: "#161616" } },
+      layout: { background: { type: ColorType.Solid, color: "#08101d" }, textColor: "#7486a0", fontFamily: "var(--font-geist-mono), monospace", fontSize: 11, panes: { separatorColor: "#1c2b42" } },
+      grid: { vertLines: { color: "#0e1828" }, horzLines: { color: "#0e1828" } },
       crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderColor: "#262626", mode: comparing ? PriceScaleMode.Percentage : opts.log ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal },
-      timeScale: { borderColor: "#262626", timeVisible: INTRADAY.has(interval), secondsVisible: false },
+      rightPriceScale: { borderColor: "#1c2b42", mode: comparing ? PriceScaleMode.Percentage : opts.log ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal },
+      timeScale: { borderColor: "#1c2b42", timeVisible: INTRADAY.has(interval), secondsVisible: false },
       localization: { locale: "fr-FR" },
     });
     const t = main.candles.map((c) => toTime(c, main));
@@ -77,13 +77,13 @@ export default function PriceChart({ symbol, interval, range, compare, opts, onM
       if (opts.sma50) line(sma(t, closes, 50), "#c77dff");
       if (opts.sma200) line(sma(t, closes, 200), "#e6e600");
       if (opts.ema20) line(ema(t, closes, 20), "#ff4d9a");
-      if (opts.boll) { const b = bollinger(t, closes); line(b.up, "#5a5a5a"); line(b.lo, "#5a5a5a"); }
+      if (opts.boll) { const b = bollinger(t, closes); line(b.up, "#4d5d75"); line(b.lo, "#4d5d75"); }
       let pane = 1;
       if (opts.rsi) {
         const s = line(rsi(t, closes), "#ffa028", pane);
         s.applyOptions({ lastValueVisible: true, title: "RSI 14" });
-        s.createPriceLine({ price: 70, color: "#5a5a5a", lineStyle: 2, lineWidth: 1, axisLabelVisible: false });
-        s.createPriceLine({ price: 30, color: "#5a5a5a", lineStyle: 2, lineWidth: 1, axisLabelVisible: false });
+        s.createPriceLine({ price: 70, color: "#4d5d75", lineStyle: 2, lineWidth: 1, axisLabelVisible: false });
+        s.createPriceLine({ price: 30, color: "#4d5d75", lineStyle: 2, lineWidth: 1, axisLabelVisible: false });
         pane++;
       }
       if (opts.macd) {
