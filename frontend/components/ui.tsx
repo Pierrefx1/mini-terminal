@@ -88,6 +88,24 @@ export function RangeBar({ pos, width = 70 }: { pos?: number | null; width?: num
   );
 }
 
+/** Champ numérique de calculateur : libellé, valeur, unité ; recalcul à chaque frappe. */
+export function Num({ label, value, onChange, step = "any", suffix, w = "w-24", title }: { label: string; value: number; onChange: (v: number) => void; step?: string | number; suffix?: string; w?: string; title?: string }) {
+  return (
+    <label className="flex items-center justify-between gap-2 py-0.5" title={title}>
+      <span className="text-dim">{label}</span>
+      <span className="flex items-center gap-1">
+        <input type="number" step={step} value={Number.isFinite(value) ? value : ""} onChange={(e) => onChange(e.target.value === "" ? NaN : Number(e.target.value))} className={`${w} text-right`} />
+        {suffix && <span className="w-10 text-dim">{suffix}</span>}
+      </span>
+    </label>
+  );
+}
+
+/** Ligne de résultat de calculateur. */
+export function Out({ label, value, cls = "text-fg", title }: { label: string; value: React.ReactNode; cls?: string; title?: string }) {
+  return <div className="flex justify-between gap-2 border-b border-line/60 py-0.5" title={title}><span className="text-dim">{label}</span><span className={`num ${cls}`}>{value}</span></div>;
+}
+
 export function Toggle({ on, onChange, children }: { on: boolean; onChange: (v: boolean) => void; children: React.ReactNode }) {
   return <button onClick={() => onChange(!on)} className={`border px-2 py-0.5 ${on ? "border-amber text-amber" : "border-line text-dim hover:text-fg"}`}>{children}</button>;
 }

@@ -27,7 +27,7 @@ export default function Graphique() {
   const [compare, setCompare] = useState<string[]>([]);
   const [cmpInput, setCmpInput] = useState("");
   const [meta, setMeta] = useState<History>();
-  const [opts, setOpts] = useState<ChartOpts>({ type: "candles", log: false, volume: true, sma20: false, sma50: true, sma200: true, ema20: false, boll: false, rsi: false, macd: false });
+  const [opts, setOpts] = useState<ChartOpts>({ type: "candles", log: false, volume: true, sma20: false, sma50: true, sma200: true, ema20: false, boll: false, rsi: false, macd: false, vwap: false, atr: false, sr: false });
   const set = (k: keyof ChartOpts) => (v: boolean) => setOpts((o) => ({ ...o, [k]: v }));
   const wl = useApi<Quote[]>("/api/market/watchlist", 60_000);
   const q = useApi<Quote[]>(`/api/market/quotes?symbols=${encodeURIComponent(symbol)}`, 60_000);
@@ -75,6 +75,9 @@ export default function Graphique() {
             <Toggle on={opts.boll} onChange={set("boll")}>Bollinger</Toggle>
             <Toggle on={opts.rsi} onChange={set("rsi")}>RSI</Toggle>
             <Toggle on={opts.macd} onChange={set("macd")}>MACD</Toggle>
+            <Toggle on={!!opts.vwap} onChange={set("vwap")}>VWAP</Toggle>
+            <Toggle on={!!opts.atr} onChange={set("atr")}>ATR</Toggle>
+            <Toggle on={!!opts.sr} onChange={set("sr")}>Supports/rés.</Toggle>
             <span className="text-dim">|</span>
             <form onSubmit={(e) => { e.preventDefault(); const s = cmpInput.trim().toUpperCase(); if (s && !compare.includes(s) && compare.length < 5) setCompare([...compare, s]); setCmpInput(""); }}>
               <input value={cmpInput} onChange={(e) => setCmpInput(e.target.value)} placeholder="Comparer (symbole)" className="w-40" />

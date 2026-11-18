@@ -5,7 +5,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 
 from . import config, db
-from .routers import calendar, crypto, data, forecasts, macro, market, news, overview, recap, screener
+from .routers import (analysis, calendar, collab, commodities, crypto, data, forecasts, macro, market, news, overview,
+                      portfolio, rates_fx, recap, screener)
 
 log = logging.getLogger("market-terminal")
 
@@ -22,6 +23,7 @@ def _safe(fn):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db.init()
+    collab.init()
     sched = BackgroundScheduler(timezone="Europe/Paris")
     sched.add_job(_safe(news.refresh), "interval", minutes=5, id="news")
     sched.add_job(_safe(calendar.refresh), "interval", minutes=60, id="calendar")
@@ -32,10 +34,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="MARKET TERMINAL", lifespan=lifespan)
-for r in (overview, market, macro, news, calendar, screener, data, forecasts, crypto, recap):
+for r in (overview, market, macro, news, calendar, screener, data, forecasts, crypto, recap,
+          commodities, rates_fx, analysis, portfolio, collab):
     app.include_router(r.router)
 
 
 @app.get("/api/status")
 def status():
-    return {"keys": {"fred": bool(config.FRED_API_KEY), "finnhub": bool(config.FINNHUB_API_KEY), "gemini": bool(config.GEMINI_API_KEY)}}
+    return {"keys": {"fred": bool(config.FRED_API_KEY), "finnhub": bool(config.FINNHUB_API_KEY), "gemini": bool(config.GEMINI_API_KEY), "eia": bool(config.EIA_API_KEY)}}

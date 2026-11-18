@@ -23,8 +23,8 @@ Ce document décrit l'architecture actuelle, les choix qui la justifient et la f
  └───────────────┬─────────────────────────────────────────────┘
                  │ SQLite (data/terminal.db) : cache, news, calendrier, watchlist
                  ▼
-   Yahoo Finance · U.S. Treasury · BRI · FRED · BCE · Eurostat · OCDE · Banque mondiale
-   · ForexFactory · CoinGecko · flux RSS · Google Gemini
+   Yahoo Finance · CBOE · EIA · CFTC · U.S. Treasury · BRI · FRED · BCE · Eurostat · OCDE
+   · Banque mondiale · ForexFactory · CoinGecko · flux RSS · Google Gemini
 ```
 
 ### Le contrat de données : l'enveloppe
@@ -61,18 +61,20 @@ mini-terminal/
 │   │   ├── db.py               schéma SQLite, connexion
 │   │   ├── cache.py            cache + enveloppe source/statut/heure
 │   │   ├── analytics.py        calculs purs (variations, volatilité, 52 semaines, largeur)
-│   │   ├── providers/          yahoo, treasury, bis, fred, ecb, eurostat, oecd, worldbank,
-│   │   │                       forexfactory, coingecko, rss, universe, base, registry, http
-│   │   └── routers/            overview (WEI, DES), market, macro, news, calendar,
-│   │                           screener, crypto, forecasts, data, recap
+│   │   ├── risk.py             VaR, ES, Monte Carlo, ratios, bêtas factoriels, contributions
+│   │   ├── providers/          yahoo, cboe, eia, cftc, treasury, bis, fred, ecb, eurostat, oecd,
+│   │   │                       worldbank, forexfactory, coingecko, rss, universe, base, registry, http
+│   │   └── routers/            overview (WEI, DES), commodities, rates_fx (YAS, FX), analysis
+│   │                           (FA, options, economics), portfolio (PORT, RISK), collab (messagerie,
+│   │                           export Excel, note IA), market, macro, news, calendar, screener…
 │   └── tests/                  pytest
 └── frontend/
-    ├── app/                    une route par module : wei, des, graphique, news, calendrier,
-    │                           actions, macro, forecasts, data, help, page d'accueil
-    ├── components/             Shell (barres), CommandBar, ui (Panel, SourceTag, Spark…),
-    │                           PriceChart (lightweight-charts), EChart, Crypto
-    ├── lib/                    commands (analyseur), sessions (statut des places),
-    │                           api (SWR + enveloppe), format, indicators
+    ├── app/                    une route par module : wei, des, fa, dcf, fi, fx, cmdty, omon, ovme,
+    │                           econ, trade, port, risk, research, msg, ws, alerts, help…
+    ├── components/             Shell, CommandBar, AlertWatcher, Export, ui, PriceChart, EChart
+    ├── lib/                    commands (analyseur), quant (options, obligations, change, matières,
+    │                           valorisation), paper (moteur d'exécution simulé), alerts, indicators,
+    │                           sessions, store (stockage navigateur), portfolios, api, format
     └── tests/                  tests Node (node --test) des modules purs
 ```
 
@@ -105,16 +107,15 @@ Critères : données disponibles, fréquence, limites, licence. Les limites des 
 | CoinGecko | 250 premiers crypto-actifs | Quelques minutes | Quota gratuit limité | Mention requise | DELAYED |
 | Flux RSS (CNBC, MarketWatch, BBC, Fed, BCE…) | Actualités | Toutes les 5 minutes | — | Titres et liens vers l'éditeur uniquement | — |
 
-### Retenues pour les prochaines phases
+| CBOE | Chaînes d'options américaines (bid, ask, VI, grecques, intérêt ouvert), bid/ask des actions et ETF | Différé, sans clé | Usage personnel | DELAYED |
+| Yahoo Finance (contrats par échéance, états financiers) | Courbes à terme ; comptes annuels et trimestriels, multiples publiés | Sans clé | Usage personnel | DELAYED / HISTORICAL |
+| EIA | Stocks de brut, Cushing, SPR, essence, distillats, production, raffinage, gaz | Hebdomadaire ; clé gratuite `EIA_API_KEY` (la clé de démonstration publique est vite épuisée) | Domaine public | HISTORICAL |
+| CFTC COT | Positionnement des spéculateurs et des commerciaux | Hebdomadaire, sans clé | Domaine public | HISTORICAL |
+| FRED (ICE BofA, OCDE) | Spreads de crédit, taux souverains à 10 ans, points morts d'inflation, dates de publication | Clé FRED | Données ICE : usage non commercial | HISTORICAL |
 
-| Source | Usage prévu | Accès | Phase |
-|---|---|---|---|
-| EIA (U.S. Energy Information Administration) | Stocks de brut et produits, gaz naturel, production | Clé gratuite ; domaine public ; rapports hebdomadaires | 3 (Commodities) |
-| CFTC Commitments of Traders | Positionnement spéculatif sur les futures | Gratuit, domaine public ; hebdomadaire (vendredi, données du mardi) | 3 (Commodities) |
-| Yahoo Finance, contrats à échéance | Courbes à terme (contango, backwardation, spreads calendaires) | Couverture partielle selon les contrats, à valider contrat par contrat | 3 (Commodities) |
-| Financial Modeling Prep | États financiers, ratios, consensus | Offre gratuite limitée (environ 250 requêtes/jour, à confirmer) | 3 (Equities, FA) |
-| Finnhub | Fondamentaux, calendrier des résultats | Clé gratuite (environ 60 requêtes/min, à confirmer) ; clé déjà prévue dans `.env` | 3 |
-| Alpha Vantage, Twelve Data, Polygon | Alternatives ou compléments | Offres gratuites très limitées (à confirmer) | selon besoin |
+### Non retenues (offres gratuites trop limitées pour l'instant)
+
+Financial Modeling Prep, Finnhub, Alpha Vantage, Twelve Data, Polygon : à réexaminer pour le consensus des analystes ou le temps réel, sur accord en cas d'offre payante.
 
 ### Écartées
 
@@ -133,20 +134,20 @@ En place :
 | Largeur de marché | `analytics.breadth` | `up, down, flat, total, ad_ratio, median` |
 | Tables SQLite | `db.py` | `cache`, `news`, `calendar_events`, `watchlist`, `prefs` |
 
-Prévus :
-
-| Modèle | Phase | Champs principaux |
-|---|---|---|
-| Espace de travail | 1 bis | `panels[] {id, module, security, x, y, w, h}`, onglets, favoris (navigateur) |
-| Contrat à terme | 3 | `root, expiry, symbol, last, open_interest` ; courbe = liste ordonnée par échéance |
-| Ordre / exécution / position (simulés) | 5 | `Order {side, type, qty, limit, stop, status}`, `Fill {price, qty, slippage}`, `Position {qty, avg_price, realized, unrealized}`, statut `SIMULATED` |
-| Message | 6 | `conversation_id, author, body, attachments (instrument, cotation), sent_at` |
+| Point de courbe à terme | `routers/commodities.py` | `symbol, expiry, months, price` + métriques (forme, M1−M2, pente, rendement de roulement) |
+| Obligation | `lib/quant.ts` | `settle, maturity, coupon, freq, redemption` → prix, rendement, durations, convexité, DV01, Z-spread, OAS |
+| Ordre, exécution, position (simulés) | `lib/paper.ts` | `Order {side, type, qty, limit, stop, cond, ocoGroup, status}`, `Fill {price, ref, slippage, fees}`, `Position {qty, avgPrice, realized}` |
+| Portefeuille | `lib/portfolios.ts` (navigateur) | `holdings [{symbol, weight}], benchmark, base, years, rebalance, capital, rf` |
+| Espace de travail | navigateur | `layouts [{name, wins [{href, x, y, w, h, z, min}]}]` |
+| Note, alerte, favori | navigateur | voir `app/research`, `lib/alerts.ts` |
+| Messagerie | SQLite (`collab.py`) | `chat_users, chat_rooms, chat_members, chat_messages {body, attachment}` |
 
 ## 6. Tests
 
 ```sh
-cd backend && .venv/bin/python -m pytest      # calculs de marché
-cd frontend && npm test                       # analyseur de commandes, statut des places
+cd backend && .venv/bin/python -m pytest      # statistiques de marché, VaR, ES, Monte Carlo, ratios, bêtas
+cd frontend && npm test                       # commandes, places, Black-Scholes, binomial, Monte Carlo, obligations,
+                                              # Z-spread, OAS, change à terme, matières, DCF, paper trading, alertes, indicateurs
 ```
 
-Les calculs financiers et l'analyseur de commandes sont des fonctions pures, testées sans réseau. Les endpoints sont vérifiés contre les sources réelles à chaque livraison.
+Les calculs financiers et l'analyseur de commandes sont des fonctions pures, testées sans réseau contre des valeurs de référence (Hull pour les options, duration d'une obligation au pair, parité call-put, etc.). Les endpoints sont vérifiés contre les sources réelles à chaque livraison.

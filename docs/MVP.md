@@ -1,60 +1,47 @@
-# MARKET TERMINAL : cahier des charges du MVP et feuille de route
+# MARKET TERMINAL : cahier des charges et état des modules
 
-## Objectif du MVP
+Les 14 modules du cahier des charges sont en place. Chaque donnée affiche sa source, sa nature (LIVE, DELAYED, HISTORICAL, SIMULATED) et son heure. Quand une donnée n'existe pas gratuitement, l'interface le dit au lieu de l'estimer.
 
-Un terminal où l'on navigue entre instruments **par commandes**, où chaque donnée affiche **sa source, sa nature et son heure**, avec une vue globale des marchés et des graphiques. Utilisable sans compte, installé en une commande.
+## Les 14 modules
 
-## Périmètre livré (phase 1 et début de phase 2)
+| # | Module | Commandes | Contenu | Sources | Limites assumées |
+|---|---|---|---|---|---|
+| 01 | Market Overview | `WEI`, `HOME` | 12 indices (1, 5, 21 séances, YTD, 52 semaines, volatilité, volume des ETF), carte de 23 places, structure du VIX, largeur du S&P 500 par secteur, calendrier, news | Yahoo, ForexFactory, RSS | MSCI World approché par l'ETF URTH |
+| 02 | Equities | `DES`, `FA`, `GP`, `SCR` | Fiche, états financiers annuels et trimestriels, ratios (marges, ROE, ROIC, FCF, endettement), multiples, comparaison d'entreprises ; graphique avec RSI, MACD, Bollinger, moyennes mobiles, VWAP, ATR, supports et résistances | Yahoo (états publiés) | Consensus, objectifs de cours et actionnariat : sous licence, non affichés |
+| 03 | Fixed Income | `YAS` | Courbes US (nominale, réelle) et zone euro AAA, taux à 10 ans des souverains (Bund, OAT, Gilt, BTP, Bono, JGB), spreads de crédit IG et HY (US, euro), points morts d'inflation ; calculateur : YTM, YTC, YTW, prix pied et plein coupon, coupon couru, durations, convexité, DV01, Z-spread, OAS (Ho-Lee), chocs de ±25 à ±200 pb | U.S. Treasury, BCE, FRED (OCDE, ICE BofA) | Cotations d'obligations individuelles et convertibles non diffusées gratuitement : le calculateur valorise à partir des caractéristiques |
+| 04 | Foreign Exchange | `FX`, `FWCV` | 10 paires, volatilités historiques 1M, 3M, 1A, différentiels de taux, terme théorique par échéance (points de swap), FX swap, swap de devises, option de change (Garman-Kohlhagen), convertisseur | Yahoo, BRI | Volatilité implicite des devises (gré à gré) : non disponible, l'historique sert de défaut modifiable |
+| 05 | Commodities | `CMDTY`, `COT` | 21 contrats (énergie, métaux, agriculture) ; courbes à terme par échéance, contango et backwardation, rendement de roulement, spreads calendaires et leur historique, P&L de spread ; crack 3-2-1, crush, spark spread ; portage, rendement d'opportunité, coût de stockage ; saisonnalité ; stocks EIA comparés à la moyenne 5 ans ; positionnement CFTC (indice COT, z-score) ; couverture à variance minimale ; desk énergie et métaux | Yahoo (contrats par échéance), EIA, CFTC | Électricité, charbon, gasoil ICE, nickel et zinc LME : sous licence, signalés comme tels |
+| 06 | Derivatives | `OMON`, `OVME` | Chaîne d'options (bid, ask, VI, grecques, intérêt ouvert), surface de volatilité implicite, volatilité historique vs implicite, ratio put/call ; pricer Black-Scholes, binomial (européen et américain), Monte Carlo, volatilité implicite, grecques, sensibilité, 11 stratégies multi-jambes avec diagramme de P&L | CBOE (différé), calculs du terminal | Options américaines uniquement ; CDS, swaptions et produits structurés : pas de données gratuites |
+| 07 | Economics | `ECST`, `ECO`, `MAC`, `FCST`, `DATA` | Banques centrales (taux, historique des décisions), impact des publications (CPI, NFP, PIB, ventes, PCE, PPI) sur actions, taux, change, or, pétrole ; calendrier et consensus ; indicateurs US ; prévisions ; comparaisons internationales | BRI, FRED, Yahoo, ForexFactory, OCDE, Banque mondiale, Eurostat | Historique des consensus non disponible : surprises non mesurées |
+| 08 | News | `TOP`, `NEWS` | Fil de 13 flux, filtres pays et thème, recherche, news par instrument, alertes sur mot-clé | Flux RSS des éditeurs, Yahoo | Pas d'analyse de sentiment |
+| 09 | Research | `RES` | Fiche par actif, notes personnelles (types, étiquettes, archives, recherche), favoris, note de synthèse rédigée par IA à partir des seules données du terminal | Terminal, Google Gemini | Rapports de brokers sous licence ; texte IA signalé comme tel |
+| 10 | Valuation | `DCF` | DCF prérempli depuis les comptes publiés, CAPM avec bêta estimé, WACC, 3 scénarios, sensibilité WACC × croissance, multiples de comparables et de transactions | Yahoo, calculs du terminal | Bases de transactions M&A sous licence : multiples à saisir |
+| 11 | Trading & Execution | `TRADE` | Paper trading : ordres au marché, limite, stop, stop-limite, OCO, conditionnels ; carnet simulé autour du vrai bid/ask CBOE ; glissement et impact de marché modélisés ; positions, prix moyen, P&L réalisé et latent, exposition, historique | CBOE, Yahoo | Tout est SIMULATED ; aucune transaction réelle |
+| 12 | Portfolio Management | `PORT` | Portefeuilles multiples, poids cibles, référence, devise de base, rééquilibrage, performance, contributions, expositions (secteur, pays, devise), ordres de rééquilibrage, import du paper trading | Yahoo (cours ajustés), BCE | Stockés dans le navigateur |
+| 13 | Risk Management | `RISK` | VaR et ES historiques, paramétriques et Monte Carlo (1 et 10 jours), Sharpe, Sortino, bêta, alpha, drawdown, concentration, corrélations, attribution du risque, bêtas factoriels (taux, dollar, or, pétrole), 5 stress tests historiques et 7 hypothétiques | Yahoo, calculs du terminal | Approximation linéaire pour les chocs factoriels |
+| 14 | Communication | `MSG` | Messagerie entre utilisateurs du serveur : pseudo sans mot de passe, conversations individuelles et de groupe, partage d'instruments et de cotations, statut, présence, non-lus, notifications | Base du serveur | En local, seuls les navigateurs de la machine échangent ; il faut déployer pour les échanges à distance |
 
-| # | Exigence | Critère d'acceptation | État |
-|---|---|---|---|
-| 1 | Barre de commandes centrale | Accessible partout (⌘K, `/` ou frappe directe) ; Entrée exécute ; erreurs explicites, jamais de navigation silencieuse | Livré |
-| 2 | Syntaxe instrument + fonction | `AAPL US Equity DES`, `BRENT GP`, `EURUSD Curncy DES`, `USGG10YR Index GP`, `NEWS NVDA` ouvrent la bonne page | Livré, testé |
-| 3 | Autocomplétion et historique | Fonctions, codes d'instruments et recherche de la source proposés pendant la frappe ; 50 dernières commandes au focus | Livré |
-| 4 | Fonctions prévues mais pas construites | Message indiquant la phase prévue, aucune page factice | Livré (FA, YAS, FWCV, OMON, OVME, PORT) |
-| 5 | WEI : vue globale | 12 indices demandés : dernier cours, variation 1, 5 et 21 séances, YTD, fourchette 52 semaines, volatilité réalisée 20 jours, heure du dernier cours, mini-courbe 60 séances | Livré |
-| 6 | Carte des places mondiales | 23 indices en 3 régions, couleur proportionnelle à la variation du jour | Livré |
-| 7 | Volatilité | Structure par terme VIX 9 j / 30 j / 3 m / 6 m, VVIX, diagnostic contango ou backwardation | Livré |
-| 8 | Largeur de marché | S&P 500 : hausses, baisses, ratio, médiane sur 4 horizons, par secteur | Livré |
-| 9 | DES : fiche instrument | Cours, place, devise, type, statistiques sur un an, courbe, actualités de l'instrument | Livré |
-| 10 | Nature des données | Badge LIVE / DELAYED / HISTORICAL / SIMULATED ; PÉRIMÉ si la source échoue | Livré (marché : DELAYED) |
-| 11 | Statut des places | NYSE, LSE, Paris, Xetra, Tokyo, Hong Kong : ouvert, pause, fermé (horaires réguliers) | Livré |
-| 12 | HELP | Fonctions, état, exemples, places, codes d'instruments, raccourcis | Livré |
-| 13 | Graphiques, watchlist, news, calendrier, screener, macro | Modules existants, reliés aux commandes | Existant |
+## Interface et personnalisation
 
-Limites connues :
-- Les jours fériés ne sont pas pris en compte dans le statut des places.
-- MSCI World est approché par l'ETF URTH (l'indice n'est pas diffusé gratuitement), ce qu'indique l'interface.
-- Les volumes des indices publiés par Yahoo ne sont pas fiables : ils ne sont affichés que pour les ETF et les actions.
+- Barre de commandes : syntaxe `<instrument> <FONCTION>`, autocomplétion, historique, favoris, frappe directe. La liste complète est dans `HELP`.
+- Espace de travail (`WS`) : fenêtres déplaçables, redimensionnables et réductibles, onglets, mosaïque, ouverture par commande. Cinq profils prêts : Trader, Analyste, Portfolio Manager, Quant, Desk matières premières. Sauvegarde automatique.
+- Alertes (`ALRT`) : seuils de prix et mots-clés d'actualité, avec bandeau et notification du navigateur.
+- Exports CSV et Excel sur les tableaux principaux, avec la source en pied de feuille.
+- Statut des six grandes places boursières, bandeau de cotations, thème bleu nuit.
 
-## Design de la page principale (WEI)
+## Choix assumés par rapport au cahier des charges
 
-```
-┌ MARKET TERMINAL ┬ > commande ………………………………………………… ┬ ■NYSE ■LSE ■EPA ■XETRA ■TSE ■HKEX ┬ heure ┐
-├ MARCHÉS WEI HOME │ ACTIONS SCR GP │ TAUX & MACRO MAC FCST DATA │ INFOS TOP ECO │ HELP ─────────┤
-│ INDICES MONDIAUX (8/12)                               │ VOLATILITÉ IMPLICITE (4/12)     │
-│ région · dernier · var · 1J 5S 21S YTD · 52s · vol    │ VIX 9j 30j 3m 6m · VVIX · forme  │
-│ · heure · courbe 60 séances                            ├──────────────────────────────────┤
-│                                                        │ PROCHAINES PUBLICATIONS          │
-├───────────────────────────┬────────────────────────────┼──────────────────────────────────┤
-│ CARTE DES PLACES (5/12)   │ LARGEUR DE MARCHÉ (4/12)   │ FIL D'ACTUALITÉS (3/12)          │
-│ tuiles par région         │ horizons + secteurs        │                                  │
-├───────────────────────────┴────────────────────────────┴──────────────────────────────────┤
-│ DELAYED │ bandeau défilant : indices, taux, change, matières, crypto                       │
-└────────────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-Principes : fond bleu nuit, police à chasse fixe, bordures d'un pixel, aucun arrondi ni dégradé. Vert pour les hausses, rouge pour les baisses, orange pour les éléments actifs et les alertes. Chaque panneau porte sa source, son badge de nature et son heure.
-
-## Feuille de route
-
-| Phase | Contenu | État |
+| Demandé | Retenu | Raison |
 |---|---|---|
-| 1. Fondations | Architecture, design system, barre de commandes, navigation | Livré |
-| 1 bis. Espace de travail | Fenêtres déplaçables et redimensionnables, onglets, favoris, layouts sauvegardés dans le navigateur, profils Trader / Analyste / PM / Quant | Prochaine étape |
-| 2. Terminal de base | WEI, DES, graphiques, watchlists, recherche, actualités | Livré ; reste : watchlists multiples, alertes de prix |
-| 3. Marchés | Commodities en priorité (courbes à terme, spreads calendaires, crack et crush spreads, roll yield, coût de portage, saisonnalité, stocks EIA, positionnement CFTC, tableau de bord pétrole, gaz et métaux) ; puis Fixed Income (YAS : prix, rendement, duration, convexité, DV01, chocs de 25 à 200 pb), Forex (FWCV : forwards par parité des taux), Equities (FA) | À venir |
-| 4. Analyse quantitative | Options (Black-Scholes, binomial, Monte Carlo, grecques, volatilité implicite, payoff), Economics, valorisation DCF / WACC / multiples | À venir |
-| 5. Trading | Paper trading : carnet simulé, ordres market / limit / stop, glissement et impact simulés, positions, P&L. Tout est marqué SIMULATED | À venir |
-| 6. Gestion et recherche | Portefeuille et risque (VaR, ES, stress tests), recherche et notes, messagerie avec comptes facultatifs | À venir |
-| 7. Optimisation | Performance, sécurité, déploiement cloud | À venir |
+| Comptes, authentification, profils | Aucun compte. Préférences, portefeuilles, notes et alertes dans le navigateur ; un pseudo pour la messagerie | Exigence du propriétaire : terminal utilisable par tous sans connexion |
+| PostgreSQL et Redis | SQLite | Installation en une commande. L'accès à la base est isolé dans `db.py` et `cache.py` |
+| WebSockets temps réel | Lecture périodique | Aucune source gratuite ne diffuse en temps réel |
+| AG Grid, Zustand | Tableaux compacts, état local et URL | Pas de besoin aux volumes actuels |
+| QuantLib | Bibliothèque propre, testée contre des valeurs de référence | Lisible, sans dépendance native |
+| Déploiement cloud | Exécution locale (`./start.sh`) | Tout déploiement public demandera ton accord |
+
+## Pistes suivantes
+
+- Déploiement (Docker, hébergement), pour ouvrir la messagerie à plusieurs utilisateurs.
+- Source temps réel (payante, sur accord), puis WebSockets.
+- Volatilité implicite des devises et des matières premières, si une source est trouvée.

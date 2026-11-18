@@ -48,3 +48,18 @@ export function useRaw<T>(url: string | null) {
   const { data, error, isLoading, mutate } = useSWR<T, ApiError>(url, fetcher, { revalidateOnFocus: false, shouldRetryOnError: false });
   return { data, error, loading: isLoading, reload: mutate };
 }
+
+/** Lecture d'un point d'API en POST (corps JSON), mise en cache par corps de requête. */
+export function usePostApi<T>(url: string | null, body: unknown) {
+  const key = url ? [url, JSON.stringify(body)] : null;
+  const { data, error, isLoading, mutate } = useSWR<Envelope<T>, ApiError>(key, async ([u, b]: [string, string]) => {
+    const r = await fetch(u, { method: "POST", headers: { "Content-Type": "application/json" }, body: b });
+    if (!r.ok) {
+      const err = new ApiError(`HTTP ${r.status}`);
+      try { const j = await r.json(); const d = j.detail; err.message = typeof d === "string" ? d : d?.error ?? (Array.isArray(d) ? d.map((x: { msg: string }) => x.msg).join(" ; ") : err.message); err.source = d?.source; } catch {}
+      throw err;
+    }
+    return r.json();
+  }, { revalidateOnFocus: false, shouldRetryOnError: false, keepPreviousData: true });
+  return { env: data, data: data?.data, error, loading: isLoading, reload: mutate };
+}

@@ -63,8 +63,8 @@ test("instrument courant réutilisé quand la commande n'en donne pas", () => {
 
 test("erreurs explicites, jamais de navigation silencieuse", () => {
   for (const [input, part] of [
-    ["", "vide"], ["DES", "demande un instrument"], ["AAPL US Equity FA", "phase 3"],
-    ["PORT", "phase 6"], ["WEI AAPL", "ne prend pas"], ["foo bar baz GP", "non reconnu"],
+    ["", "vide"], ["DES", "demande un instrument"], ["OMON", "demande un instrument"],
+    ["WEI AAPL", "ne prend pas"], ["PORT AAPL", "ne prend pas"], ["foo bar baz GP", "non reconnu"],
   ]) {
     const r = parseCommand(input);
     assert.equal(r.kind, "error", input);
@@ -77,4 +77,17 @@ test("autocomplétion", () => {
   assert.ok(suggest("AAPL US Equity D").some((s) => s.value === "AAPL US EQUITY DES"));
   assert.ok(suggest("BRE").some((s) => s.label === "BRENT Comdty"));
   assert.deepEqual(suggest(""), []);
+});
+
+test("modules : analyse, marchés, trading, gestion", () => {
+  assert.equal(go("AAPL US Equity FA").href, "/fa?s=AAPL");
+  assert.equal(go("SPX OMON").href, "/omon?s=%5EGSPC");
+  assert.equal(go("BRENT CMDTY").href, "/cmdty?tab=curve&k=BRENT");
+  assert.equal(go("CMDTY").href, "/cmdty");
+  assert.equal(go("GOLD COT").href, "/cmdty?tab=cot&k=GC");
+  assert.equal(go("EURUSD Curncy FWCV").href, "/fx?s=EURUSD%3DX");
+  assert.equal(go("YAS").href, "/fi");
+  for (const [c, h] of [["PORT", "/port"], ["RISK", "/risk"], ["ALRT", "/alerts"], ["MSG", "/msg"], ["WS", "/ws"], ["ECST", "/econ"], ["OVME", "/ovme"], ["TRADE", "/trade"]]) assert.equal(go(c).href, h, c);
+  assert.equal(go("MC FP Equity DCF").href, "/dcf?s=MC.PA");
+  assert.equal(go("EIA").href, "/cmdty?tab=eia"); assert.equal(go("DESK").href, "/cmdty?tab=desk"); assert.equal(go("MENU").href, "#menu");
 });

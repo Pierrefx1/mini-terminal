@@ -3,13 +3,13 @@ import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { AreaSeries, CandlestickSeries, ColorType, createChart, CrosshairMode, HistogramSeries, LineSeries, PriceScaleMode } from "lightweight-charts";
 import { fetcher, type Envelope } from "@/lib/api";
-import { bollinger, ema, macd, rsi, sma } from "@/lib/indicators";
+import { atr, bollinger, ema, levels, macd, rsi, sma, vwap } from "@/lib/indicators";
 import { big, parisOffset, pct, price } from "@/lib/format";
 import { SourceTag, State } from "./ui";
 
 export type Candle = { time: number; open: number; high: number; low: number; close: number; volume: number };
 export type History = { symbol: string; name: string; currency: string; exchange: string; type: string; gmtoffset: number; interval: string; candles: Candle[] };
-export type ChartOpts = { type: "candles" | "line"; log: boolean; volume: boolean; sma20: boolean; sma50: boolean; sma200: boolean; ema20: boolean; boll: boolean; rsi: boolean; macd: boolean };
+export type ChartOpts = { type: "candles" | "line"; log: boolean; volume: boolean; sma20: boolean; sma50: boolean; sma200: boolean; ema20: boolean; boll: boolean; rsi: boolean; macd: boolean; vwap?: boolean; atr?: boolean; sr?: boolean };
 
 const COLORS = ["#ffa028", "#4aa8ff", "#c77dff", "#1fd15f", "#ff4d9a", "#e6e600"];
 const INTRADAY = new Set(["1m", "5m", "15m", "30m", "60m"]);
@@ -78,6 +78,11 @@ export default function PriceChart({ symbol, interval, range, compare, opts, onM
       if (opts.sma200) line(sma(t, closes, 200), "#e6e600");
       if (opts.ema20) line(ema(t, closes, 20), "#ff4d9a");
       if (opts.boll) { const b = bollinger(t, closes); line(b.up, "#4d5d75"); line(b.lo, "#4d5d75"); }
+      if (opts.vwap && main.candles.some((c) => c.volume > 0)) {
+        const dayKey = INTRADAY.has(interval) ? (i: number) => new Date(main.candles[i].time * 1000).toISOString().slice(0, 10) : undefined;
+        line(vwap(t, main.candles, dayKey), "#00d1c1", 0, 2).applyOptions({ title: INTRADAY.has(interval) ? "VWAP" : "VWAP ancré" });
+      }
+      if (opts.sr) for (const l of levels(main.candles)) mainSeries.createPriceLine({ price: l.price, color: l.kind === "support" ? "#1fd15f" : "#ff4d4d", lineStyle: 1, lineWidth: 1, axisLabelVisible: true, title: `${l.kind === "support" ? "S" : "R"} ×${l.touches}` });
       let pane = 1;
       if (opts.rsi) {
         const s = line(rsi(t, closes), "#ffa028", pane);
@@ -93,6 +98,7 @@ export default function PriceChart({ symbol, interval, range, compare, opts, onM
         line(m.macd, "#4aa8ff", pane).applyOptions({ title: "MACD 12/26/9" }); line(m.signal, "#ffa028", pane);
         pane++;
       }
+      if (opts.atr) { line(atr(t, main.candles), "#c77dff", pane).applyOptions({ lastValueVisible: true, title: "ATR 14" }); pane++; }
       const panes = chart.panes();
       for (let i = 1; i < panes.length; i++) panes[i].setHeight(110);
     }

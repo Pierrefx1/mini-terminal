@@ -79,3 +79,27 @@ def test_largeur_de_marche():
     assert (b["up"], b["down"], b["flat"], b["total"]) == (2, 1, 1, 4)
     assert b["ad_ratio"] == 2 and b["median"] == pytest.approx(0.5)
     assert breadth([])["median"] is None
+
+
+def test_dernier_jour_de_cotation_des_contrats():
+    from datetime import date
+    from app.routers.commodities import last_trade
+    assert last_trade("CL", 2026, 12) == date(2026, 11, 20)   # 25/11 mercredi -> 3 jours ouvrés avant
+    assert last_trade("CL", 2025, 1) == date(2024, 12, 19)    # 25/12 férié : 3 jours ouvrés avant le 24/12
+    assert last_trade("NG", 2026, 12) == date(2026, 11, 25)   # Thanksgiving (26/11) exclu
+    assert last_trade("CL", 2025, 5) == date(2025, 4, 22)     # CLK25 : expiré le mardi 22/04/2025
+    assert last_trade("CL", 2020, 5) == date(2020, 4, 21)     # CLK20 (prix négatif) : 25/04 samedi -> 21/04
+    assert last_trade("NG", 2027, 1) == date(2026, 12, 29)    # 3 jours ouvrés avant le 1er janvier
+    assert last_trade("BZ", 2027, 1) == date(2026, 11, 30)    # dernier jour ouvré de novembre
+    assert last_trade("GC", 2026, 12) == date(2026, 12, 29)   # troisième avant-dernier jour ouvré
+    assert last_trade("ZC", 2027, 3) == date(2027, 3, 12)     # jour ouvré avant le 15 (14 = dimanche)
+
+
+def test_jours_feries_americains():
+    from datetime import date
+    from app.routers.commodities import us_holidays
+    h = us_holidays(2026)
+    assert date(2026, 4, 3) in h       # Vendredi saint
+    assert date(2026, 11, 26) in h     # Thanksgiving
+    assert date(2026, 7, 3) in h       # 4 juillet un samedi : férié le vendredi
+    assert date(2026, 5, 25) in h      # Memorial Day

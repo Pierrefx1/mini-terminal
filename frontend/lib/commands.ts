@@ -37,13 +37,33 @@ export const FUNCTIONS: Fn[] = [
   { code: "DATA", label: "Données par pays", security: "none", route: () => "/data", example: "DATA" },
   { code: "HOME", label: "Page d'accueil (récap IA, publications, news)", security: "none", route: () => "/", example: "HOME" },
   { code: "HELP", label: "Aide : fonctions, instruments, raccourcis", security: "none", route: () => "/help", example: "HELP" },
-  { code: "FA", label: "Analyse fondamentale", security: "required", unavailable: "prévu en phase 3 (Equities)", example: "AAPL US Equity FA" },
-  { code: "YAS", label: "Analyse obligataire", security: "required", unavailable: "prévu en phase 3 (Fixed Income)", example: "USGG10YR Index YAS" },
-  { code: "FWCV", label: "Calculateur de change à terme", security: "optional", unavailable: "prévu en phase 3 (Forex)", example: "EURUSD Curncy FWCV" },
-  { code: "OMON", label: "Moniteur d'options", security: "required", unavailable: "prévu en phase 4 (Derivatives)", example: "AAPL US Equity OMON" },
-  { code: "OVME", label: "Valorisation d'options", security: "optional", unavailable: "prévu en phase 4 (Derivatives)", example: "OVME" },
-  { code: "PORT", label: "Portefeuille", security: "none", unavailable: "prévu en phase 6, stocké localement (le terminal reste sans compte)", example: "PORT" },
+  { code: "MENU", label: "Menu de tous les modules (⌥M)", security: "none", route: () => "#menu", example: "MENU" },
+  { code: "FA", label: "Analyse fondamentale : états financiers, ratios, comparables", security: "required", route: (s) => `/fa${q(s)}`, example: "AAPL US Equity FA" },
+  { code: "DCF", label: "Valorisation : DCF, CAPM, WACC, multiples, scénarios", security: "optional", route: (s) => `/dcf${q(s)}`, example: "MC FP Equity DCF" },
+  { code: "YAS", label: "Fixed Income : courbes, crédit, calculateur obligataire", security: "optional", route: () => "/fi", example: "YAS" },
+  { code: "FX", label: "Forex : paires, volatilités, différentiels de taux", security: "optional", route: (s) => `/fx${q(s)}`, example: "FX" },
+  { code: "FWCV", label: "Change à terme, FX swap, options de change", security: "optional", route: (s) => `/fx${q(s)}`, example: "EURUSD Curncy FWCV" },
+  { code: "CMDTY", label: "Matières premières : tableau, courbes, spreads, stocks, COT", security: "optional", route: (s) => (s && CMDTY_KEYS[s.symbol] ? `/cmdty?tab=curve&k=${CMDTY_KEYS[s.symbol]}` : "/cmdty"), example: "BRENT CMDTY" },
+  { code: "COT", label: "Positionnement CFTC d'une matière première", security: "optional", route: (s) => `/cmdty?tab=cot&k=${(s && CMDTY_KEYS[s.symbol]) || "WTI"}`, example: "GOLD COT" },
+  { code: "EIA", label: "Stocks de pétrole et de gaz (EIA)", security: "none", route: () => "/cmdty?tab=eia", example: "EIA" },
+  { code: "DESK", label: "Desk énergie et métaux", security: "none", route: () => "/cmdty?tab=desk", example: "DESK" },
+  { code: "OMON", label: "Moniteur d'options (chaîne CBOE, surface de volatilité)", security: "required", route: (s) => `/omon${q(s)}`, example: "AAPL US Equity OMON" },
+  { code: "OVME", label: "Valorisation d'options et stratégies", security: "optional", route: (s) => `/ovme${q(s)}`, example: "OVME" },
+  { code: "ECST", label: "Economics : banques centrales, impact des publications", security: "none", route: () => "/econ", example: "ECST" },
+  { code: "TRADE", label: "Paper trading : ordres, carnet, positions, P&L (simulé)", security: "optional", route: (s) => `/trade${q(s)}`, example: "AAPL US Equity TRADE" },
+  { code: "PORT", label: "Portefeuilles : allocation, performance, expositions, rééquilibrage", security: "none", route: () => "/port", example: "PORT" },
+  { code: "RISK", label: "Risque : VaR, ES, stress tests, Monte Carlo, corrélations", security: "none", route: () => "/risk", example: "RISK" },
+  { code: "RES", label: "Recherche : fiche, notes, favoris, note IA", security: "optional", route: (s) => `/research${q(s)}`, example: "NVDA US Equity RES" },
+  { code: "ALRT", label: "Alertes de prix et d'actualité", security: "none", route: () => "/alerts", example: "ALRT" },
+  { code: "MSG", label: "Messagerie entre utilisateurs", security: "none", route: () => "/msg", example: "MSG" },
+  { code: "WS", label: "Espace de travail multi-fenêtres et profils", security: "none", route: () => "/ws", example: "WS" },
 ];
+
+/** Symbole de contrat -> clé du module matières premières. */
+const CMDTY_KEYS: Record<string, string> = {
+  "BZ=F": "BRENT", "CL=F": "WTI", "NG=F": "NG", "HO=F": "HO", "RB=F": "RB", "GC=F": "GC", "SI=F": "SI", "HG=F": "HG", "PL=F": "PL", "PA=F": "PA",
+  "ZW=F": "ZW", "ZC=F": "ZC", "ZS=F": "ZS", "KC=F": "KC", "CC=F": "CC", "SB=F": "SB", "CT=F": "CT",
+};
 const BY_CODE = new Map(FUNCTIONS.map((f) => [f.code, f]));
 
 type Alias = [symbol: string, name: string, yellow: Yellow, note?: string];

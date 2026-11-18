@@ -111,6 +111,20 @@ class Yahoo:
                 out[s] = {"t": [p[0] for p in pts], "c": [p[1] for p in pts]}
         return out
 
+    def fundamentals(self, symbol: str, types: list[str], period1: int = 1262304000) -> dict[str, list[dict]]:
+        """Séries fondamentales publiées (états financiers, ratios) : {type: [{date, value, currency}]}."""
+        out: dict[str, list[dict]] = {}
+        for i in range(0, len(types), 40):  # l'API limite le nombre de types par appel
+            j = get(f"https://query2.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/{symbol}",
+                    params={"type": ",".join(types[i:i + 40]), "period1": period1, "period2": int(time.time()) + 86400}).json()
+            for r in j.get("timeseries", {}).get("result") or []:
+                t = r["meta"]["type"][0]
+                pts = [{"date": v["asOfDate"], "value": v["reportedValue"]["raw"], "currency": v.get("currencyCode")}
+                       for v in (r.get(t) or []) if v and v.get("reportedValue")]
+                if pts:
+                    out[t] = pts
+        return out
+
     def search(self, query: str) -> list[dict]:
         j = get("https://query2.finance.yahoo.com/v1/finance/search",
                 params={"q": query, "quotesCount": 12, "newsCount": 0}).json()

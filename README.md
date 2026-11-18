@@ -2,9 +2,9 @@
 
 Terminal de marché en local, inspiré des terminaux professionnels et utilisable sans compte. On y navigue par commandes (`AAPL US Equity DES`, `BRENT GP`, `WEI`…). Chaque donnée affiche sa source, sa nature (LIVE, DELAYED, HISTORICAL, SIMULATED) et son heure de relevé.
 
-Modules : vue globale des marchés (WEI), fiche instrument (DES), graphique (GP), actualités, calendrier économique, screener et carte des actions, macro, prévisions, données par pays, récap du matin rédigé par IA.
+14 modules : vue globale des marchés, actions et analyse fondamentale, obligataire, change, matières premières (courbes à terme, spreads, stocks EIA, positionnement CFTC), options et pricer, économie, actualités, recherche, valorisation DCF, paper trading, portefeuilles, risque (VaR, stress tests), messagerie. Plus un espace de travail multi-fenêtres, des alertes et l'export Excel.
 
-Documentation : [architecture](docs/ARCHITECTURE.md) · [cahier des charges du MVP et feuille de route](docs/MVP.md)
+Documentation : [architecture](docs/ARCHITECTURE.md) · [les 14 modules, leurs sources et leurs limites](docs/MVP.md)
 
 ## Lancer
 
@@ -22,7 +22,8 @@ Créé au premier lancement à partir de `.env.example`.
 |---|---|
 | `FRED_API_KEY` | Clé gratuite (fred.stlouisfed.org, rubrique API Keys). Active les indicateurs US du module Macro et les projections de la Fed. |
 | `GEMINI_API_KEY` | Clé API Google Gemini (aistudio.google.com). Active le récap marché IA de la page d'accueil. |
-| `RECAP_MODEL` | Modèle Gemini du récap (défaut `gemini-3.8-flash`). |
+| `RECAP_MODEL` | Modèle Gemini du récap et des notes de recherche (défaut `gemini-3.8-flash`). |
+| `EIA_API_KEY` | Clé gratuite (eia.gov/opendata). Stocks de pétrole et de gaz du module matières premières ; sans elle, la clé de démonstration publique, vite épuisée. |
 
 Relancer après modification.
 
@@ -40,6 +41,12 @@ Syntaxe : `<instrument> <FONCTION>` ou `<FONCTION> [instrument]`, puis Entrée. 
 | `USGG10YR Index GP` | Graphique du taux US à 10 ans |
 | `NEWS NVDA` | Actualités de Nvidia |
 | `TOP`, `ECO` | Actualités principales, calendrier économique |
+| `BRENT CMDTY`, `GOLD COT` | Courbe à terme du Brent, positionnement CFTC sur l'or |
+| `AAPL US Equity FA`, `MC FP Equity DCF` | Analyse fondamentale, valorisation |
+| `SPX OMON`, `OVME` | Chaîne d'options du S&P 500, pricer d'options |
+| `YAS`, `EURUSD Curncy FWCV` | Obligataire, change à terme |
+| `TRADE`, `PORT`, `RISK` | Paper trading, portefeuilles, risque |
+| `RES`, `ALRT`, `MSG`, `WS` | Recherche, alertes, messagerie, espace de travail |
 
 Clavier : `⌘K` ou `/` pour la barre de commandes (taper une lettre n'importe où fonctionne aussi), `↑ ↓` et `Tab` pour les suggestions, champ vide pour l'historique, `⌥1` à `⌥9` pour les onglets.
 
@@ -48,6 +55,11 @@ Clavier : `⌘K` ou `/` pour la barre de commandes (taper une lettre n'importe o
 | Module | Source | Limites |
 |---|---|---|
 | WEI, DES, graphique, bandeau, watchlist | Yahoo Finance | Cours différés (DELAYED), API non officielle ; MSCI World approché par l'ETF URTH |
+| Matières premières | Yahoo (contrats par échéance), EIA, CFTC | Électricité, charbon, métaux LME : sous licence, non couverts |
+| Options, paper trading | CBOE (chaînes, bid/ask différés) | Options américaines uniquement ; exécutions simulées |
+| Obligataire, change | U.S. Treasury, BCE, FRED (OCDE, ICE BofA), BRI | Pas de cotations d'obligations individuelles ni de volatilité implicite des devises |
+| Analyse fondamentale | Yahoo (états publiés) | Consensus et actionnariat sous licence, non affichés |
+| Portefeuille et risque | Yahoo (cours ajustés), calculs du terminal | Données saisies gardées dans le navigateur |
 | Calendrier | Export hebdo ForexFactory | Semaine en cours ; pas de chiffre réel (déduit du « précédent » de la publication suivante) ; l'historique se constitue localement |
 | News | 13 flux RSS (CNBC, MarketWatch, Fed, BCE, BoE, BEA, BBC, Guardian, Le Monde, Le Figaro, France 24) + Yahoo par symbole | 45 jours conservés |
 | Screener, actions | Wikipedia (composition, secteurs), SPDR (poids S&P 500), Yahoo (cours) | Pas de capitalisation ni de PER ; rendement et volume recalculés une fois par jour |
@@ -68,6 +80,6 @@ Chaque panneau affiche sa source et l'heure du relevé. Si une source échoue, l
 Détails et choix techniques : [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```sh
-cd backend && .venv/bin/python -m pytest   # calculs de marché
-cd frontend && npm test                    # commandes, statut des places
+cd backend && .venv/bin/python -m pytest   # statistiques, VaR, ES, Monte Carlo, ratios
+cd frontend && npm test                    # commandes, options, obligations, change, DCF, paper trading…
 ```

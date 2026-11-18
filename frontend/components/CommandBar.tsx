@@ -2,6 +2,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useApi } from "@/lib/api";
+import { useLocal } from "@/lib/store";
 import { FUNCTIONS, parseCommand, resolveSecurity, suggest, type Suggestion } from "@/lib/commands";
 
 const HISTORY_KEY = "mt.history";
@@ -25,6 +26,7 @@ export default function CommandBar() {
   const [sel, setSel] = useState(-1);
   const [err, setErr] = useState<string | null>(null);
   const [history, setHistory] = useState<string[]>([]);
+  const [favorites] = useLocal<string[]>("mt.favorites", []);
   const [dq, setDq] = useState("");
   useEffect(() => setHistory(loadHistory()), []);
 
@@ -40,11 +42,11 @@ export default function CommandBar() {
   const remote = useApi<{ symbol: string; name: string; type: string; exchange: string }[]>(dq ? `/api/market/search?q=${encodeURIComponent(dq)}` : null);
 
   const items: Suggestion[] = useMemo(() => {
-    if (!value.trim()) return history.slice(0, 12).map((h) => ({ value: h, label: h, detail: "historique" }));
+    if (!value.trim()) return [...favorites.map((f) => ({ value: `${f} DES`, label: `★ ${f}`, detail: "favori" })), ...history.slice(0, 12).map((h) => ({ value: h, label: h, detail: "historique" }))];
     const local = suggest(value);
     const found = (dq ? remote.data ?? [] : []).slice(0, 8).map((r) => ({ value: `${r.symbol} DES`, label: r.symbol, detail: `${r.name} · ${r.type ?? ""} ${r.exchange ?? ""}` }));
     return [...local, ...found.filter((f) => !local.some((l) => l.value === f.value))];
-  }, [value, history, dq, remote.data]);
+  }, [value, history, dq, remote.data, favorites]);
   useEffect(() => setSel(-1), [value]);
 
   // ⌘K ou « / » : focus ; toute frappe hors champ de saisie commence une commande
@@ -69,6 +71,7 @@ export default function CommandBar() {
     const h = [r.command, ...history.filter((x) => x !== r.command)].slice(0, 50);
     setHistory(h); saveHistory(h);
     setErr(null); setValue(""); input.current?.blur();
+    if (r.href === "#menu") { window.dispatchEvent(new Event("mt-open-menu")); return; }
     router.push(r.href);
   };
 

@@ -45,3 +45,46 @@ export function macd(t: any[], v: number[], f = 12, s = 26, sig = 9) {
   const tt = t.slice(start), ll = line.slice(start);
   return { macd: pts(tt, ll), signal: pts(tt, sg), hist: pts(tt, ll.map((x, i) => x - sg[i])) };
 }
+
+type OHLCV = { high: number; low: number; close: number; volume: number };
+
+/** ATR de Wilder (moyenne lissée de l'étendue vraie). */
+export function atr(t: any[], c: OHLCV[], n = 14): Pt[] {
+  const tr = c.map((x, i) => (i === 0 ? x.high - x.low : Math.max(x.high - x.low, Math.abs(x.high - c[i - 1].close), Math.abs(x.low - c[i - 1].close))));
+  const out: Pt[] = [];
+  let a = 0;
+  tr.forEach((v, i) => {
+    if (i < n) { a += v / n; if (i === n - 1) out.push({ time: t[i], value: a }); }
+    else { a = (a * (n - 1) + v) / n; out.push({ time: t[i], value: a }); }
+  });
+  return out;
+}
+
+/** VWAP : cumul prix typique × volume / volume, remis à zéro à chaque séance (intrajournalier) ou ancré au début de la période. */
+export function vwap(t: any[], c: OHLCV[], dayKey?: (i: number) => string): Pt[] {
+  let pv = 0, vv = 0, key = "";
+  return c.map((x, i) => {
+    const k = dayKey ? dayKey(i) : "";
+    if (k !== key) { pv = 0; vv = 0; key = k; }
+    pv += (x.high + x.low + x.close) / 3 * x.volume; vv += x.volume;
+    return { time: t[i], value: vv ? pv / vv : x.close };
+  }).filter((p) => Number.isFinite(p.value));
+}
+
+/** Supports et résistances : sommets et creux locaux (fenêtre ±w) regroupés à moins de `tol` (relatif), les plus touchés d'abord. */
+export function levels(c: OHLCV[], w = 5, tol = 0.01, max = 6): { price: number; kind: "support" | "résistance"; touches: number }[] {
+  const piv: { p: number; k: "support" | "résistance" }[] = [];
+  for (let i = w; i < c.length - w; i++) {
+    const win = c.slice(i - w, i + w + 1);
+    if (c[i].high === Math.max(...win.map((x) => x.high))) piv.push({ p: c[i].high, k: "résistance" });
+    if (c[i].low === Math.min(...win.map((x) => x.low))) piv.push({ p: c[i].low, k: "support" });
+  }
+  const groups: { price: number; touches: number; kinds: string[] }[] = [];
+  for (const x of piv) {
+    const g = groups.find((g) => Math.abs(g.price - x.p) / g.price < tol);
+    if (g) { g.price = (g.price * g.touches + x.p) / (g.touches + 1); g.touches++; g.kinds.push(x.k); } else groups.push({ price: x.p, touches: 1, kinds: [x.k] });
+  }
+  const last = c.at(-1)?.close ?? 0;
+  return groups.filter((g) => g.touches >= 2).sort((a, b) => b.touches - a.touches).slice(0, max)
+    .map((g) => ({ price: g.price, touches: g.touches, kind: g.price <= last ? "support" : "résistance" }));
+}
