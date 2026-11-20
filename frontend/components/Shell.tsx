@@ -140,22 +140,11 @@ function Launcher({ onClose }: { onClose: () => void }) {
 }
 
 export default function Shell({ children }: { children: React.ReactNode }) {
-  // fenêtre de l'espace de travail : le module seul, sans barres
-  if (useSearchParams().get("embed") === "1") return <div className="h-full overflow-hidden p-1">{children}</div>;
-  return <FullShell>{children}</FullShell>;
-}
-
-function FullShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const search = useSearchParams();
   const router = useRouter();
   const routerRef = useRef(router); routerRef.current = router;
-  // sur l'espace de travail, menu replié par défaut pour laisser la place aux fenêtres (préférence mémorisée à part)
-  const onWs = path === "/ws";
-  const [collapsedMain, setCollapsedMain] = useLocal<boolean>("mt.nav.collapsed", false);
-  const [collapsedWs, setCollapsedWs] = useLocal<boolean>("mt.nav.collapsed.ws", true);
-  const collapsed = onWs ? collapsedWs : collapsedMain;
-  const setCollapsed = onWs ? setCollapsedWs : setCollapsedMain;
+  const [collapsed, setCollapsed] = useLocal<boolean>("mt.nav.collapsed", false);
   const [menu, setMenu] = useState(false);
   const cur = currentItem(path, search);
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 Terminal de marché en local, inspiré des terminaux professionnels et utilisable sans compte. On y navigue par commandes (`AAPL US Equity DES`, `BRENT GP`, `WEI`…). Chaque donnée affiche sa source, sa nature (LIVE, DELAYED, HISTORICAL, SIMULATED) et son heure de relevé.
 
-14 modules : vue globale des marchés, actions et analyse fondamentale, obligataire, change, matières premières (courbes à terme, spreads, stocks EIA, positionnement CFTC), options et pricer, économie, actualités, recherche, valorisation DCF, paper trading, portefeuilles, risque (VaR, stress tests), messagerie. Plus un espace de travail multi-fenêtres, des alertes et l'export Excel.
+14 modules : vue globale des marchés, actions et analyse fondamentale, obligataire, change, matières premières (courbes à terme, spreads, stocks EIA, positionnement CFTC), options et pricer, économie, actualités, recherche, valorisation DCF, paper trading, portefeuilles, risque (VaR, stress tests), messagerie. Plus des alertes et l'export Excel.
 
 Documentation : [architecture](docs/ARCHITECTURE.md) · [les 14 modules, leurs sources et leurs limites](docs/MVP.md)
 
@@ -51,7 +51,7 @@ Syntaxe : `<instrument> <FONCTION>` ou `<FONCTION> [instrument]`, puis Entrée. 
 | `SRC` | État des sources de données : dernier succès, dernière erreur, taux d'échec, latence |
 | `YAS`, `EURUSD Curncy FWCV` | Obligataire, change à terme |
 | `TRADE`, `PORT`, `RISK` | Paper trading, portefeuilles, risque |
-| `RES`, `ALRT`, `MSG`, `WS` | Recherche, alertes, messagerie, espace de travail |
+| `RES`, `ALRT`, `MSG` | Recherche, alertes, messagerie |
 
 Clavier : `⌘K` ou `/` pour la barre de commandes (taper une lettre n'importe où fonctionne aussi), `↑ ↓` et `Tab` pour les suggestions, champ vide pour l'historique, `⌥1` à `⌥9` pour les onglets.
 

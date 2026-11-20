@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 const AXIS = { axisLine: { lineStyle: { color: "#1c2b42" } }, axisLabel: { color: "#7486a0", fontSize: 10 }, splitLine: { lineStyle: { color: "#0e1828" } } };
 export const PALETTE = ["#ffa028", "#4aa8ff", "#c77dff", "#1fd15f", "#ff4d9a", "#e6e600", "#9aa0a6", "#00d1c1"];
 
-export default function EChart({ option, onClick, className = "h-full w-full" }: { option: any; onClick?: (p: any) => void; className?: string }) {
+export default function EChart({ option, onClick, onInit, className = "h-full w-full" }: { option: any; onClick?: (p: any) => void; onInit?: (c: echarts.ECharts) => void; className?: string }) {
   const el = useRef<HTMLDivElement>(null);
   const inst = useRef<echarts.ECharts | null>(null);
   const cb = useRef(onClick); cb.current = onClick;
@@ -14,10 +14,11 @@ export default function EChart({ option, onClick, className = "h-full w-full" }:
     const c = echarts.init(el.current, undefined, { renderer: "canvas" });
     inst.current = c;
     c.on("click", (p) => cb.current?.(p));
+    onInit?.(c);
     const ro = new ResizeObserver(() => c.resize());
     ro.observe(el.current);
     return () => { ro.disconnect(); c.dispose(); };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { inst.current?.setOption({ backgroundColor: "transparent", textStyle: { fontFamily: "var(--font-geist-mono), monospace" }, color: PALETTE, ...option }, true); }, [option]);
   return <div ref={el} className={className} />;
 }

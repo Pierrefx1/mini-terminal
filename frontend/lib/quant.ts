@@ -113,6 +113,22 @@ export function payoff(legs: Leg[], S: number, entry = 0): number {
   }, 0);
 }
 
+/** Jambe valorisée à sa propre volatilité (smile de marché) ; `sigma` absent : vol commune passée à strategyPnl. */
+export type PricedLeg = Leg & { sigma?: number };
+
+/**
+ * P&L d'une combinaison face à sa prime d'entrée, pour un cours S, un temps restant tau (années) et un choc parallèle
+ * de volatilité volShift (en décimal, ex. 0.05 = +5 points). Hypothèse sticky-strike : chaque jambe garde la vol de son strike.
+ * tau = 0 : valeur intrinsèque, identique à payoff().
+ */
+export function strategyPnl(legs: PricedLeg[], S: number, tau: number, r: number, q: number, S0: number, sigma: number, volShift = 0): number {
+  return legs.reduce((acc, l) => {
+    if (l.kind === "underlying") return acc + l.side * l.qty * (S - S0);
+    const v = blackScholes({ S, K: l.K!, T: tau, r, q, sigma: Math.max(0.005, (l.sigma ?? sigma) + volShift), type: l.kind }).price;
+    return acc + l.side * l.qty * (v - (l.premium ?? 0));
+  }, 0);
+}
+
 // ───────────────────────── Obligations ─────────────────────────
 export type Bond = { settle: string; maturity: string; coupon: number; freq: 1 | 2 | 4; redemption?: number };
 const DAY = 86_400_000;

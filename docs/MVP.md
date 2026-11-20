@@ -24,7 +24,6 @@ Les 14 modules du cahier des charges sont en place. Chaque donnée affiche sa so
 ## Interface et personnalisation
 
 - Barre de commandes : syntaxe `<instrument> <FONCTION>`, autocomplétion, historique, favoris, frappe directe. La liste complète est dans `HELP`.
-- Espace de travail (`WS`) : fenêtres déplaçables, redimensionnables et réductibles, onglets, mosaïque, ouverture par commande. Cinq profils prêts : Trader, Analyste, Portfolio Manager, Quant, Desk matières premières. Sauvegarde automatique.
 - Alertes (`ALRT`) : seuils de prix et mots-clés d'actualité, avec bandeau et notification du navigateur.
 - Exports CSV et Excel sur les tableaux principaux, avec la source en pied de feuille.
 - Statut des six grandes places boursières, bandeau de cotations, thème bleu nuit.

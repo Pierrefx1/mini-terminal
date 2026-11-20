@@ -86,7 +86,7 @@ mini-terminal/
 | Authentification | Comptes, profils | Aucune | Choix du propriétaire du projet : terminal utilisable par tous sans connexion. Les préférences restent dans le navigateur. | Comptes facultatifs en phase 6, uniquement pour la messagerie et la synchronisation. |
 | Temps réel | WebSockets | Lecture périodique (SWR) | Aucune source gratuite actuelle ne diffuse en continu : un WebSocket relaierait des cours différés sans rien gagner. | WebSocket le jour où une source `LIVE` est branchée. |
 | Grilles | AG Grid | Tableaux HTML compacts | Suffisant pour les volumes actuels, sans dépendance. | AG Grid Community (licence MIT) pour le screener et les blotters de trading. |
-| État global | Zustand ou Redux | État local + URL (`?s=`) | L'instrument courant vit dans l'URL : liens partageables, bouton retour du navigateur. | Zustand avec l'espace de travail multi-fenêtres (phase 1 bis). |
+| État global | Zustand ou Redux | État local + URL (`?s=`) | L'instrument courant vit dans l'URL : liens partageables, bouton retour du navigateur. | – |
 | Calcul quantitatif | NumPy, SciPy, QuantLib | NumPy, Pandas ; Python pur pour les calculs testés | Les calculs actuels sont simples et lisibles. | QuantLib en phase 3 (obligations) et 4 (options). |
 
 ## 4. Fournisseurs de données
@@ -138,7 +138,6 @@ En place :
 | Obligation | `lib/quant.ts` | `settle, maturity, coupon, freq, redemption` → prix, rendement, durations, convexité, DV01, Z-spread, OAS |
 | Ordre, exécution, position (simulés) | `lib/paper.ts` | `Order {side, type, qty, limit, stop, cond, ocoGroup, status}`, `Fill {price, ref, slippage, fees}`, `Position {qty, avgPrice, realized}` |
 | Portefeuille | `lib/portfolios.ts` (navigateur) | `holdings [{symbol, weight}], benchmark, base, years, rebalance, capital, rf` |
-| Espace de travail | navigateur | `layouts [{name, wins [{href, x, y, w, h, z, min}]}]` |
 | Note, alerte, favori | navigateur | voir `app/research`, `lib/alerts.ts` |
 | Messagerie | SQLite (`collab.py`) | `chat_users, chat_rooms, chat_members, chat_messages {body, attachment}` |
 

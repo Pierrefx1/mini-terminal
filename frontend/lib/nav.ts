@@ -7,12 +7,11 @@ export const NAV: NavGroup[] = [
     { code: "WEI", href: "/wei", label: "Vue mondiale", icon: "globe", desc: "Indices mondiaux, volatilité, carte des places, largeur de marché", example: "WEI" },
     { code: "WM", href: "/wm", label: "World Monitor", icon: "radar", desc: "Globe 3D : risques géopolitiques, publications, places financières, flux", example: "WM" },
     { code: "HOME", href: "/", label: "Accueil", icon: "home", desc: "Récap IA du matin, publications à venir, dernières news", example: "HOME" },
-    { code: "WS", href: "/ws", label: "Espace de travail", icon: "windows", desc: "Plusieurs modules côte à côte, profils Trader, Analyste, PM, Quant", example: "WS" },
   ] },
   { title: "Actions", color: "#4aa8ff", items: [
     { code: "GP", href: "/graphique", label: "Graphique", icon: "candles", desc: "Bougies, moyennes mobiles, RSI, MACD, VWAP, ATR, supports", example: "AAPL US Equity GP" },
     { code: "DES", href: "/des", label: "Fiche instrument", icon: "card", desc: "Cours, statistiques sur un an, actualités d'un instrument", example: "AAPL US Equity DES" },
-    { code: "FA", href: "/fa", label: "Fondamentaux", icon: "report", desc: "États financiers, ratios, multiples, comparaison d'entreprises", example: "AAPL US Equity FA" },
+    { code: "FA", href: "/fa", label: "Fondamentaux", icon: "report", desc: "États financiers (jusqu'à 15 ans via la SEC), ratios, multiples, comparables et nuage de valorisation", example: "AAPL US Equity FA" },
     { code: "DCF", href: "/dcf", label: "Valorisation", icon: "calc", desc: "DCF, CAPM, WACC, scénarios, sensibilité, multiples", example: "MC FP Equity DCF" },
     { code: "SCR", href: "/actions", label: "Screener", icon: "filter", desc: "Carte et filtres des actions (S&P 500, CAC 40…), crypto", example: "SCR" },
   ] },
@@ -29,23 +28,23 @@ export const NAV: NavGroup[] = [
   ] },
   { title: "Dérivés", color: "#00d1c1", items: [
     { code: "OMON", href: "/omon", label: "Options", icon: "layers", desc: "Chaîne d'options, surface de volatilité, put/call", example: "SPX OMON" },
-    { code: "OVME", href: "/ovme", label: "Pricer", icon: "sigma", desc: "Black-Scholes, binomial, Monte Carlo, grecques, stratégies", example: "OVME" },
+    { code: "OVME", href: "/ovme", label: "Pricer", icon: "sigma", desc: "Black-Scholes, binomial, Monte Carlo, grecques, stratégies au smile de marché, scénarios cours × vol, P&L 3D", example: "OVME" },
     { code: "VOL", href: "/vol", label: "Vol Surface", icon: "surface", desc: "Surface de volatilité 3D, structure par terme ATM, smile, skew et butterfly", example: "VOL SPY" },
   ] },
   { title: "Économie", color: "#1fd15f", items: [
     { code: "ECST", href: "/econ", label: "Banques centrales", icon: "bank", desc: "Taux directeurs, décisions, impact des publications", example: "ECST" },
     { code: "ECO", href: "/calendrier", label: "Calendrier", icon: "calendar", desc: "Publications économiques, consensus, précédents", example: "ECO" },
     { code: "FCST", href: "/forecasts", label: "Prévisions", icon: "trend", desc: "Prévisions OCDE, anticipations de taux de la Fed", example: "FCST" },
-    { code: "DATA", href: "/data", label: "Données pays", icon: "flag", desc: "Comparaisons internationales (dette, déficit, croissance)", example: "DATA" },
+    { code: "DATA", href: "/data", label: "Données pays", icon: "flag", desc: "Carte du monde interactive : fiche complète de chaque pays (croissance, inflation, emploi, taux, dette, commerce), classements et comparaisons", example: "DATA" },
   ] },
   { title: "Infos et recherche", color: "#ff4d9a", items: [
-    { code: "TOP", href: "/news", label: "News", icon: "news", desc: "Fil d'actualités, filtres, news par instrument", example: "NEWS NVDA" },
+    { code: "TOP", href: "/news", label: "News", icon: "news", desc: "Articles illustrés, lecteur, fil des dépêches, TV d'information en direct, news par instrument", example: "NEWS NVDA" },
     { code: "RES", href: "/research", label: "Recherche", icon: "book", desc: "Fiche par actif, notes, favoris, note rédigée par IA", example: "NVDA US Equity RES" },
   ] },
   { title: "Trading et risque", color: "#ff4d4d", items: [
     { code: "TRADE", href: "/trade", label: "Paper trading", icon: "swap", desc: "Ordres simulés, carnet, positions, P&L", example: "AAPL US Equity TRADE" },
     { code: "PORT", href: "/port", label: "Portefeuilles", icon: "pie", desc: "Allocation, performance, expositions, rééquilibrage", example: "PORT" },
-    { code: "RISK", href: "/risk", label: "Risque", icon: "shield", desc: "VaR, Expected Shortfall, stress tests, corrélations", example: "RISK" },
+    { code: "RISK", href: "/risk", label: "Risque", icon: "shield", desc: "VaR, Expected Shortfall, stress tests, scénarios de chocs personnalisés, corrélations", example: "RISK" },
     { code: "ALRT", href: "/alerts", label: "Alertes", icon: "bell", desc: "Alertes de prix et de mots-clés d'actualité", example: "ALRT" },
   ] },
   { title: "Outils", color: "#9aa0a6", items: [

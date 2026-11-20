@@ -1,12 +1,63 @@
 "use client";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import EChart from "@/components/EChart";
 import Export from "@/components/Export";
-import { Out, Panel, SourceTag, State } from "@/components/ui";
+import { Num, Out, Panel, SourceTag, State } from "@/components/ui";
 import { usePostApi } from "@/lib/api";
 import { big, num, pct, tone } from "@/lib/format";
 import { analysisBody, type Analysis, usePortfolios } from "@/lib/portfolios";
+
+/** Chocs prédéfinis du scénario personnalisé, en % par facteur (proxys : SPY, TLT, UUP, GLD, USO). */
+const PRESETS: Record<string, Record<string, number>> = {
+  "Aucun": {},
+  "Correction actions": { SPY: -10 },
+  "Krach (type mars 2020)": { SPY: -34, TLT: 10, UUP: 4, GLD: -3, USO: -60 },
+  "Choc de taux (type 2022)": { SPY: -20, TLT: -30, UUP: 15, GLD: -5, USO: 30 },
+  "Désinflation douce": { SPY: 8, TLT: 8, UUP: -3, GLD: 4, USO: -10 },
+  "Choc pétrolier": { SPY: -8, TLT: -4, UUP: 2, GLD: 6, USO: 40 },
+};
+const TLT_DURATION = 16; // duration modifiée approximative de TLT : +100 pb ≈ −16 %
+const EQ_SHOCKS = [-30, -20, -10, -5, 0, 5, 10];
+const RATE_SHOCKS_BP = [-150, -100, -50, 0, 50, 100, 150];
+
+function CustomScenario({ factors, cap, base }: { factors: Analysis["factors"]; cap: number; base: string }) {
+  const [shock, setShock] = useState<Record<string, number>>({});
+  const [preset, setPreset] = useState("Aucun");
+  const beta = (k: string) => factors.find((f) => f.symbol === k)?.beta ?? 0;
+  const contrib = factors.map((f) => ({ ...f, shock: shock[f.symbol] ?? 0, pnl: (f.beta ?? 0) * (shock[f.symbol] ?? 0) }));
+  const total = contrib.reduce((s, c) => s + c.pnl, 0);
+  // carte : choc actions × choc de taux (via TLT), les autres facteurs restant au scénario saisi
+  const others = contrib.filter((c) => c.symbol !== "SPY" && c.symbol !== "TLT").reduce((s, c) => s + c.pnl, 0);
+  const cells = RATE_SHOCKS_BP.flatMap((bp, y) => EQ_SHOCKS.map((eq, x) => [x, y, beta("SPY") * eq + beta("TLT") * (-bp / 100 * TLT_DURATION) + others]));
+  const ext = Math.max(0.01, ...cells.map((c) => Math.abs(c[2])));
+  const heat = {
+    tooltip: { formatter: (p: any) => `Actions ${EQ_SHOCKS[p.value[0]]} % · taux ${RATE_SHOCKS_BP[p.value[1]] > 0 ? "+" : ""}${RATE_SHOCKS_BP[p.value[1]]} pb<br/>Portefeuille ${pct(p.value[2])} · ${big(p.value[2] / 100 * cap)} ${base}` },
+    grid: { left: 64, right: 10, top: 8, bottom: 40 },
+    xAxis: { type: "category", data: EQ_SHOCKS.map((e) => `${e > 0 ? "+" : ""}${e} %`), axisLabel: { color: "#7486a0" }, name: "actions (SPY)", nameLocation: "middle", nameGap: 26, nameTextStyle: { color: "#7486a0" } },
+    yAxis: { type: "category", data: RATE_SHOCKS_BP.map((b) => `${b > 0 ? "+" : ""}${b} pb`), axisLabel: { color: "#7486a0" }, name: "taux longs", nameTextStyle: { color: "#7486a0" } },
+    visualMap: { min: -ext, max: ext, show: false, inRange: { color: ["#ff4d4d", "#3a1a1a", "#0e1828", "#123a24", "#1fd15f"] } },
+    series: [{ type: "heatmap", data: cells, label: { show: true, color: "#d4dbe6", fontSize: 9, formatter: (p: any) => num(p.value[2], 1) } }],
+  };
+  return (
+    <div className="grid grid-cols-12">
+      <div className="col-span-12 px-2 py-1 md:col-span-5">
+        <div className="flex items-center justify-between py-0.5"><span className="text-dim">Scénario type</span>
+          <select value={preset} onChange={(e) => { setPreset(e.target.value); setShock(PRESETS[e.target.value]); }}>{Object.keys(PRESETS).map((k) => <option key={k}>{k}</option>)}</select></div>
+        {factors.map((f) => <Num key={f.symbol} label={`${f.name} (${f.symbol})`} value={shock[f.symbol] ?? 0} step={1} suffix="%" onChange={(v) => { setPreset("Aucun"); setShock({ ...shock, [f.symbol]: Number.isFinite(v) ? v : 0 }); }} />)}
+        <div className="py-0.5 text-[10px] text-dim">Taux : +100 pb sur le long terme ≈ TLT −{TLT_DURATION} % (duration).</div>
+        <table className="mt-1"><thead><tr><th>Facteur</th><th className="num">Bêta</th><th className="num">Choc</th><th className="num">Contribution</th></tr></thead>
+          <tbody>{contrib.map((c) => <tr key={c.symbol}><td>{c.symbol}</td><td className="num">{num(c.beta, 2)}</td><td className="num">{pct(c.shock, 0)}</td><td className={`num ${tone(c.pnl)}`}>{pct(c.pnl)}</td></tr>)}
+            <tr className="border-t border-amber"><td className="text-amber">Total</td><td /><td /><td className={`num ${tone(total)}`}>{pct(total)}</td></tr></tbody></table>
+        <Out label={`Impact estimé en ${base}`} value={big(total / 100 * cap)} cls={tone(total)} />
+      </div>
+      <div className="col-span-12 md:col-span-7">
+        <div className="h-72"><EChart option={heat} /></div>
+        <div className="px-2 text-[10px] text-dim">Impact en % selon le choc actions et le choc de taux longs ; les autres facteurs restent au niveau saisi.</div>
+      </div>
+    </div>
+  );
+}
 
 export default function Risk() {
   const { list, current, setCurrentId } = usePortfolios();
@@ -30,7 +81,7 @@ export default function Risk() {
   }, [d]);
   const hhi = d ? d.lines.reduce((s, l) => s + l.current ** 2, 0) : 0;
   return (
-    <div className="grid h-full grid-cols-12 gap-1 overflow-auto">
+    <div className="grid h-full auto-rows-max grid-cols-12 content-start gap-1 overflow-auto">
       <Panel className="col-span-12" title="RISK · gestion des risques" right={<><select value={current?.id} onChange={(e) => setCurrentId(e.target.value)}>{list.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select><Link href="/port" className="text-info">PORT →</Link><SourceTag env={a.env} /></>}>
         <State loading={a.loading && !d} error={a.error} />
         {d && <div className="grid grid-cols-2 gap-x-6 px-2 py-1 md:grid-cols-4">
@@ -68,6 +119,10 @@ export default function Risk() {
           <table><thead><tr><th>Scénario hypothétique (factoriel)</th><th className="num">Impact</th><th className="num">en {d.base}</th></tr></thead>
             <tbody>{d.factor_scenarios.map((s) => <tr key={s.name}><td>{s.name}</td><td className={`num ${tone(s.pnl_pct)}`}>{pct(s.pnl_pct)}</td><td className={`num ${tone(s.pnl_pct)}`}>{s.pnl_pct == null ? "–" : big(s.pnl_pct / 100 * cap)}</td></tr>)}</tbody></table>
           <div className="px-2 py-1 text-[10px] text-dim">Historiques : portefeuille actuel rejoué sur la période (poids cibles). Hypothétiques : bêtas factoriels × choc ; approximation linéaire.</div>
+        </Panel>
+        <Panel className="col-span-12" title="Scénario personnalisé : chocs de facteurs">
+          <CustomScenario factors={d.factors} cap={cap} base={d.base} />
+          <div className="px-2 pb-1 text-[10px] text-dim">Approximation linéaire : impact = Σ bêta × choc, avec les bêtas de la régression multiple sur deux ans. Ne capture ni la convexité (options), ni les changements de corrélation en crise : à compléter par les scénarios historiques.</div>
         </Panel>
         <Panel className="col-span-12 lg:col-span-6" title="Attribution du risque et corrélations (un an)">
           <table><thead><tr><th>Ligne</th><th className="num">Poids</th><th className="num">Volatilité</th><th className="num">Part du risque</th><th className="num">Risque / poids</th></tr></thead>

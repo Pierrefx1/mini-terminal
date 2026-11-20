@@ -195,3 +195,18 @@ test("paper trading : fourchette réelle écartée si elle est décalée du dern
   assert.equal(stale.modelled, true); assert.equal(stale.stale, true);
   near((stale.bid + stale.ask) / 2, 355.29, 1e-9);
 });
+
+test("P&L de stratégie : échéance = payoff, vega du straddle, vol par jambe", () => {
+  const S0 = 100, r = 0.04, q = 0.01, sig = 0.25, T = 0.5;
+  const base = [{ kind: "call", side: 1, qty: 1, K: 100 }, { kind: "put", side: 1, qty: 1, K: 100 }];
+  const legs = base.map((l) => ({ ...l, premium: Q.blackScholes({ S: S0, K: l.K, T, r, q, sigma: sig, type: l.kind }).price }));
+  for (const S of [70, 95, 100, 112, 140]) near(Q.strategyPnl(legs, S, 0, r, q, S0, sig), Q.payoff(legs, S, S0), 1e-12, `S=${S}`);
+  near(Q.strategyPnl(legs, S0, T, r, q, S0, sig), 0, 1e-12, "P&L nul à l'entrée");
+  assert.ok(Q.strategyPnl(legs, S0, T, r, q, S0, sig, 0.05) > 0, "straddle acheté : gagne si la vol monte");
+  assert.ok(Q.strategyPnl(legs, S0, T * 0.5, r, q, S0, sig) < 0, "straddle acheté : perd avec le temps à cours inchangé");
+  // une jambe à sa propre vol (smile) : valorisée à cette vol, pas à la vol commune
+  const smile = [{ kind: "put", side: 1, qty: 1, K: 90, sigma: 0.35, premium: 0 }];
+  near(Q.strategyPnl(smile, S0, T, r, q, S0, sig), Q.blackScholes({ S: S0, K: 90, T, r, q, sigma: 0.35, type: "put" }).price, 1e-12);
+  // sous-jacent : linéaire
+  near(Q.strategyPnl([{ kind: "underlying", side: -1, qty: 2 }], 110, T, r, q, S0, sig), -20, 1e-12);
+});

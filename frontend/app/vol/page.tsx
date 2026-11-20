@@ -3,8 +3,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import Export from "@/components/Export";
 import Plot from "@/components/Plot";
-import { Num, Panel, SourceTag, State } from "@/components/ui";
+import { Num, Panel, Seg, SourceTag, State, Toggle } from "@/components/ui";
 import { fetcher, useApi } from "@/lib/api";
+import { volGrid } from "@/lib/volgrid";
 import { num } from "@/lib/format";
 
 type Metric = { expiry: string; days: number; fwd: number; atm_vol: number | null; skew_90_110: number | null; fly_90_110: number | null };
@@ -62,23 +63,63 @@ export default function VOL() {
   };
   const custom = JSON.stringify(params) !== JSON.stringify(DEFAULTS);
 
-  const surface = useMemo(() => d && {
-    data: d.figure.data.map((t) => (t.type === "scatter3d"
-      ? { ...t, marker: { size: 1.6, color: "#d4dbe6", opacity: 0.55 } }
-      : { ...t, colorbar: { title: { text: "IV %", font: { color: "#7486a0", size: 10 } }, thickness: 8, len: 0.55, x: 0.97, y: 0.5, outlinewidth: 0, tickfont: { color: "#7486a0", size: 9 } },
-          lighting: { ambient: 0.75, diffuse: 0.5, specular: 0.1, roughness: 0.9 }, contours: { z: { show: true, usecolormap: true, project: { z: false }, width: 1 } } })),
-    layout: {
-      margin: { l: 0, r: 0, t: 0, b: 0 }, showlegend: false,
-      scene: {
-        domain: { x: [0, 0.94], y: [0, 1] },
-        xaxis: { title: { text: "ln(K/F)" }, tickformat: ".1f", nticks: 7 },
-        yaxis: { title: { text: "Jours" }, ticksuffix: " j", nticks: 6 },
-        zaxis: { title: { text: "IV" }, ticksuffix: " %", nticks: 6 },
-        camera: { eye: { x: -1.05, y: -1.15, z: 0.55 }, center: { x: 0, y: 0, z: -0.18 } },
-        aspectmode: "manual", aspectratio: { x: 1.55, y: 1.3, z: 0.8 },
+  // Surface 3D : grille construite côté terminal à partir des points de marché (voir lib/volgrid.ts)
+  const [view, setView] = useState<"3d" | "smile" | "term" | "top">("3d");
+  const [span, setSpan] = useState(20);
+  const [quotes, setQuotes] = useState(false);
+  const surface = useMemo(() => {
+    if (!d) return null;
+    const g = volGrid(d.points, { mMin: 100 - span, mMax: 100 + span, nk: 81, between: 3 });
+    const all = g.z.flat().filter((x): x is number => x != null).map((x) => x * 100);
+    if (!all.length) return null;
+    const sorted = [...all].sort((a, b) => a - b);
+    // couleurs bornées aux percentiles 2–98 % : quelques ailes très courtes ne doivent pas écraser l'échelle
+    const zmin = sorted[Math.floor(sorted.length * 0.02)], zmax = sorted[Math.ceil(sorted.length * 0.98) - 1];
+    const inRange = (k: number) => { const m = Math.exp(k) * 100; return m >= 100 - span - 1e-9 && m <= 100 + span + 1e-9; };
+    const CAM = {
+      "3d": { eye: { x: 0.95, y: -1.75, z: 0.7 }, up: { x: 0, y: 0, z: 1 } },
+      smile: { eye: { x: 0, y: -2.1, z: 0.1 }, up: { x: 0, y: 0, z: 1 } },
+      term: { eye: { x: 2.1, y: 0, z: 0.1 }, up: { x: 0, y: 0, z: 1 } },
+      top: { eye: { x: 0, y: 0, z: 2.2 }, up: { x: 0, y: 1, z: 0 } },
+    }[view];
+    const data: any[] = [
+      { type: "surface", x: g.m, y: g.days, z: g.z.map((r) => r.map((x) => (x == null ? null : x * 100))), connectgaps: false,
+        cmin: zmin, cmax: zmax, colorscale: [[0, "#0b2a5b"], [0.2, "#1565c0"], [0.4, "#00a6b4"], [0.6, "#1fd15f"], [0.8, "#ffa028"], [1, "#ff4d4d"]],
+        opacity: 0.97, showscale: true,
+        colorbar: { title: { text: "IV %", font: { color: "#7486a0", size: 10 } }, thickness: 8, len: 0.6, x: 0.98, outlinewidth: 0, tickfont: { color: "#7486a0", size: 9 }, ticksuffix: " %" },
+        lighting: { ambient: 0.62, diffuse: 0.75, specular: 0.18, roughness: 0.55, fresnel: 0.15 }, lightposition: { x: -1000, y: -2000, z: 3000 },
+        contours: {
+          x: { show: true, start: 100 - span, end: 100 + span, size: span >= 30 ? 10 : 5, color: "rgba(212,219,230,0.18)", width: 1 },
+          z: { show: true, usecolormap: true, width: 2, project: { z: view === "top" } },
+        },
+        hovertemplate: "K/F %{x:.1f} %<br>%{y:.0f} jours<br>IV %{z:.2f} %<extra></extra>" },
+      // smiles réellement cotés, une ligne par échéance
+      ...g.slices.map((sl) => {
+        const idx = sl.k.map((k, i) => (inRange(k) ? i : -1)).filter((i) => i >= 0);
+        return { type: "scatter3d", mode: "lines", x: idx.map((i) => Math.exp(sl.k[i]) * 100), y: idx.map(() => sl.days), z: idx.map((i) => sl.iv[i] * 100 + 0.08),
+          line: { color: sl.expiry === expiry ? "#ffffff" : "rgba(230,236,245,0.55)", width: sl.expiry === expiry ? 5 : 2 }, hoverinfo: "skip", showlegend: false };
+      }),
+      // structure par terme à la monnaie
+      { type: "scatter3d", mode: "lines+markers", x: g.atm.map(() => 100), y: g.atm.map((a) => a.days), z: g.atm.map((a) => (a.iv == null ? null : a.iv * 100 + 0.12)),
+        line: { color: "#ffa028", width: 6 }, marker: { size: 3, color: "#ffa028" }, name: "ATM", hovertemplate: "ATM · %{y} j<br>IV %{z:.2f} %<extra></extra>", showlegend: false },
+      ...(quotes ? [{ type: "scatter3d", mode: "markers", x: d.points.filter((p) => inRange(p.k)).map((p) => Math.exp(p.k) * 100), y: d.points.filter((p) => inRange(p.k)).map((p) => p.T * 365),
+        z: d.points.filter((p) => inRange(p.k)).map((p) => p.iv * 100), marker: { size: 1.8, color: "#d4dbe6", opacity: 0.7 }, hovertemplate: "cotation · K/F %{x:.1f} %<br>%{y:.0f} j · IV %{z:.2f} %<extra></extra>", showlegend: false }] : []),
+    ];
+    return {
+      data,
+      layout: {
+        margin: { l: 0, r: 0, t: 0, b: 0 }, showlegend: false, uirevision: `${d.ticker}-${view}-${span}`,
+        scene: {
+          domain: { x: [0, 0.95], y: [0, 1] },
+          xaxis: { title: { text: "Moneyness K/F" }, ticksuffix: " %", nticks: 7, range: [100 - span, 100 + span], showspikes: false },
+          yaxis: { title: { text: "Échéance" }, ticksuffix: " j", nticks: 7, showspikes: false },
+          zaxis: { title: { text: "IV" }, ticksuffix: " %", nticks: 6, showspikes: false },
+          camera: { ...CAM, center: { x: 0, y: 0, z: -0.12 }, projection: { type: view === "3d" ? "perspective" : "orthographic" } },
+          aspectmode: "manual", aspectratio: { x: 1.7, y: 1.5, z: 0.85 },
+        },
       },
-    },
-  }, [d]);
+    };
+  }, [d, view, span, quotes, expiry]);
 
   const term = useMemo(() => d && {
     data: [{ type: "scatter", mode: "lines+markers", x: d.metrics.map((m) => m.days), y: d.metrics.map((m) => (m.atm_vol == null ? null : m.atm_vol * 100)),
@@ -92,9 +133,9 @@ export default function VOL() {
     const pts = d.points.filter((p) => p.expiry === expiry).sort((a, b) => a.k - b.k);
     if (!pts.length) return null;
     return {
-      data: [{ type: "scatter", mode: "lines+markers", x: pts.map((p) => p.k), y: pts.map((p) => p.iv * 100), customdata: pts.map((p) => p.K),
+      data: [{ type: "scatter", mode: "lines+markers", x: pts.map((p) => p.k), y: pts.map((p) => p.iv * 100), customdata: pts.map((p) => [p.K, p.T]),
         line: { color: "#2a3d5c", width: 1 }, marker: { size: 4, color: pts.map((p) => (p.k < 0 ? "#ff4d4d" : "#1fd15f")) },
-        hovertemplate: "K %{customdata} · ln(K/F) %{x:.3f}<br>IV %{y:.2f} %<extra></extra>" }],
+        hovertemplate: "K %{customdata[0]} · ln(K/F) %{x:.3f}<br>IV %{y:.2f} %<br>clic : valoriser dans OVME<extra></extra>" }],
       layout: { margin: { l: 40, r: 10, t: 6, b: 30 }, xaxis: { tickformat: ".2f" }, yaxis: { ticksuffix: " %" },
         shapes: [0, Math.log(0.9), Math.log(1.1)].map((x) => ({ type: "line", x0: x, x1: x, yref: "paper", y0: 0, y1: 1, line: { color: x === 0 ? "#ffa028" : "#2a3d5c", width: 1, dash: x === 0 ? "solid" : "dot" } })) },
     };
@@ -171,9 +212,15 @@ export default function VOL() {
         </div>
 
         {/* Surface + métriques */}
-        <Panel className="col-span-12 h-[460px] xl:col-span-8" title={`Surface ${d.ticker} · IV en fonction de ln(K/F) et de l'échéance`}
-          right={<span title="Glisser : rotation · molette : zoom · double-clic : vue initiale">3D interactive</span>}>
-          {surface && <Plot data={surface.data} layout={surface.layout} />}
+        <Panel className="col-span-12 h-[460px] xl:col-span-8" title={`Surface ${d.ticker} · IV selon la moneyness et l'échéance`}
+          right={<span className="flex items-center gap-2" title="Glisser : rotation · molette : zoom · double-clic : vue initiale">
+            <Seg value={view} options={[["3d", "3D"], ["smile", "Smile"], ["term", "Terme"], ["top", "Dessus"]]} onChange={setView} />
+            <select value={span} onChange={(e) => setSpan(+e.target.value)}>{[10, 20, 30, 40].map((x) => <option key={x} value={x}>K/F ±{x} %</option>)}</select>
+            <Toggle on={quotes} onChange={setQuotes}>cotations</Toggle></span>}>
+          <div className="flex h-full flex-col">
+            <div className="min-h-0 flex-1">{surface && <Plot data={surface.data} layout={surface.layout} />}</div>
+            <div className="shrink-0 px-2 pb-0.5 text-[10px] text-dim">Lignes blanches : smiles cotés (en gras : échéance sélectionnée) · orange : vol à la monnaie. Zones vides : aucun strike coté, rien n&apos;est extrapolé.</div>
+          </div>
         </Panel>
 
         <Panel className="col-span-12 h-[460px] xl:col-span-4" title="Par échéance"
@@ -188,14 +235,17 @@ export default function VOL() {
                 <td className="num text-fg">{volPct(m.atm_vol, 2)}</td><td className="num">{volPct(m.skew_90_110, 2)}</td><td className="num">{volPct(m.fly_90_110, 2)}</td>
               </tr>))}</tbody>
           </table>
-          <div className="px-2 py-1 text-[10px] text-dim">Clic sur une ligne : smile de l&apos;échéance. « – » : 90 % ou 110 % hors des strikes cotés.</div>
+          <div className="px-2 py-1 text-[10px] text-dim">Clic sur une ligne : smile de l&apos;échéance ; clic sur un point du smile : valorisation dans OVME. « – » : 90 % ou 110 % hors des strikes cotés.</div>
         </Panel>
 
         {/* Graphiques 2D */}
         <Panel className="col-span-12 h-[300px] md:col-span-6 xl:col-span-4"
           title={<span className="normal-case tracking-normal">SMILE · <select value={expiry} onChange={(e) => setExpiry(e.target.value)}>{d.metrics.map((m) => <option key={m.expiry} value={m.expiry}>{m.expiry} ({m.days} j)</option>)}</select></span>}
           right={sel && <span>fwd {num(sel.fwd, 2)} · ATM <span className="text-fg">{volPct(sel.atm_vol, 2)} %</span></span>}>
-          {smile && <Plot data={smile.data} layout={smile.layout} />}
+          {smile && <Plot data={smile.data} layout={smile.layout} onClick={(p) => {
+            const [K, T] = p.customdata as [number, number];
+            router.push(`/ovme?s=${encodeURIComponent(d.ticker)}&S=${d.spot.toFixed(2)}&K=${K}&T=${T.toFixed(4)}&vol=${(+p.y).toFixed(2)}&type=${p.x < 0 ? "put" : "call"}&mkt=1`);
+          }} />}
         </Panel>
 
         <Panel className="col-span-12 h-[300px] md:col-span-6 xl:col-span-4" title="Structure par terme ATM" right={<span>{d.metrics.length} échéances</span>}>
@@ -227,7 +277,7 @@ export default function VOL() {
         </Panel>
 
         <div className="col-span-12 px-1 pb-1 text-[10px] text-dim">
-          Méthode : options OTM uniquement (puts sous le forward, calls au-dessus), forward implicite par parité call-put, IV Black-76 sur le forward, surface interpolée linéairement en (ln(K/F), T).
+          Méthode : options OTM uniquement (puts sous le forward, calls au-dessus), forward implicite par parité call-put, IV Black-76 sur le forward, surface 3D : chaque échéance interpolée linéairement entre ses seuls strikes cotés, variance totale interpolée entre échéances, aucune extrapolation.
           Maturité constante : variance totale interpolée entre les échéances encadrantes. RV : close-to-close annualisée √252. Vols en %, skew, fly et écarts en points de vol.
         </div>
       </>}

@@ -58,7 +58,6 @@ export const FUNCTIONS: Fn[] = [
   { code: "RES", label: "Recherche : fiche, notes, favoris, note IA", security: "optional", route: (s) => `/research${q(s)}`, example: "NVDA US Equity RES" },
   { code: "ALRT", label: "Alertes de prix et d'actualité", security: "none", route: () => "/alerts", example: "ALRT" },
   { code: "MSG", label: "Messagerie entre utilisateurs", security: "none", route: () => "/msg", example: "MSG" },
-  { code: "WS", label: "Espace de travail multi-fenêtres et profils", security: "none", route: () => "/ws", example: "WS" },
   { code: "SRC", label: "État des sources de données : dernier succès, erreurs, latence", security: "none", route: () => "/src", example: "SRC" },
 ];
 

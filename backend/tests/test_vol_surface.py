@@ -1,4 +1,5 @@
 """Moteur VOL : chaîne synthétique prix Black-76 à vol connue -> l'IV recalculée doit être exacte (aucun appel réseau)."""
+import json
 import math
 
 import numpy as np
@@ -204,3 +205,38 @@ def test_historique_vol_et_comparaison_realisee(tmp_db, monkeypatch):
     assert s["spread_20"] == pytest.approx(s["iv30"] - s["rv20"])
     assert 0 <= s["iv30_pct_vs_rv20"] <= 100
     assert s["iv30_pct_own"] is None  # moins de 20 séances enregistrées
+
+
+def _records(spot=497.0):
+    pts = vs.build_surface_points(synthetic_chain(), spot=spot, cfg=vs.Config(rate=RATE))
+    return json.loads(pts[["expiry", "T", "K", "F", "k", "iv"]].to_json(orient="records"))
+
+
+def test_lookup_sur_une_echeance_cotee_retrouve_le_smile():
+    T = 90 / 365
+    out = vs.lookup(_records(), 497.0, [450.0, 500.0, 560.0], T)
+    for K, iv in zip(out["strikes"], out["iv"]):
+        assert iv == pytest.approx(smile(math.log(K / F_TRUE), T), abs=3e-4)
+    assert out["forward"] == pytest.approx(F_TRUE, rel=1e-9)
+    assert out["carry"] == pytest.approx(math.log(F_TRUE / 497.0) / T, rel=1e-9)
+    assert not out["extrapolated"]
+
+
+def test_lookup_entre_echeances_interpole_la_variance_totale():
+    T0, T1, T = 90 / 365, 180 / 365, 120 / 365
+    K = 500.0
+    k = math.log(K / F_TRUE)
+    w0, w1 = smile(k, T0) ** 2 * T0, smile(k, T1) ** 2 * T1
+    expected = math.sqrt((w0 + (w1 - w0) * (T - T0) / (T1 - T0)) / T)
+    out = vs.lookup(_records(), 497.0, [K], T)
+    assert out["iv"][0] == pytest.approx(expected, abs=3e-4)
+    assert out["expiries_used"] == [pytest.approx(T0), pytest.approx(T1)]
+
+
+def test_lookup_extrapolation_plate_et_erreurs():
+    out = vs.lookup(_records(), 497.0, [500.0], 3.0)
+    assert out["extrapolated"] and out["iv"][0] == pytest.approx(smile(math.log(500 / F_TRUE), 1.0), abs=3e-4)
+    with pytest.raises(ValueError):
+        vs.lookup(_records(), 497.0, [-1.0], 0.5)
+    with pytest.raises(vs.VolSurfaceError):
+        vs.lookup([], 497.0, [500.0], 0.5)

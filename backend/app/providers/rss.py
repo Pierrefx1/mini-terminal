@@ -50,6 +50,24 @@ def _theme(text: str, default: str) -> str:
     return default
 
 
+IMG = re.compile(r'<img[^>]+src="([^"]+)"', re.I)
+
+
+def image(e) -> str:
+    """Illustration d'un article RSS : media:content, media:thumbnail (la plus grande), enclosure image, ou 1re <img> du résumé."""
+    cands = []
+    for m in (e.get("media_content") or []) + (e.get("media_thumbnail") or []):
+        if m.get("url") and (m.get("medium") in (None, "image") or str(m.get("type", "")).startswith("image")):
+            cands.append((int(m.get("width") or 0), m["url"]))
+    if cands:
+        return max(cands)[1]
+    for l in e.get("links") or []:
+        if str(l.get("type", "")).startswith("image") and l.get("href"):
+            return l["href"]
+    m = IMG.search(e.get("summary", "") or "") or IMG.search(((e.get("content") or [{}])[0]).get("value", "") or "")
+    return m.group(1) if m else ""
+
+
 def parse(name: str, url: str, country: str, lang: str, default_theme: str, symbol: str = "") -> list[dict]:
     feed = feedparser.parse(get(url).content)
     out = []
@@ -62,11 +80,13 @@ def parse(name: str, url: str, country: str, lang: str, default_theme: str, symb
         published = datetime.fromtimestamp(calendar.timegm(ts), timezone.utc)
         if published > datetime.now(timezone.utc):
             published = datetime.now(timezone.utc)
-        summary = _clean(e.get("summary", ""))
+        summary = _clean(e.get("summary", ""), 700)
+        img = image(e)
         key = re.sub(r"[^a-z0-9]+", "", title.lower())  # dédoublonnage par titre normalisé
         out.append({"id": hashlib.sha1((key + symbol).encode()).hexdigest()[:16], "title": title, "link": link, "source": name,
                     "published": published.isoformat(timespec="seconds"), "summary": "" if summary == title else summary,
-                    "theme": _theme(title + " " + summary, default_theme), "country": country, "lang": lang, "symbol": symbol})
+                    "theme": _theme(title + " " + summary, default_theme), "country": country, "lang": lang, "symbol": symbol,
+                    "image": img if img.startswith("https://") else ""})
     return out
 
 

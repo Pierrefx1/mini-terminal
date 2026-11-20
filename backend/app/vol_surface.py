@@ -244,6 +244,66 @@ def constant_maturity(metrics: pd.DataFrame, days: float = 30) -> dict:
             out[col] = float(np.interp(days, g["days"].to_numpy(float), g[col].to_numpy(float)))
     return out
 
+# ---------------------------------------------------------------- Lecture de la surface (pricer)
+
+def _slice_iv(g: pd.DataFrame, k: float) -> float:
+    """IV d'une échéance en log-moneyness k : linéaire entre points, plate au-delà des strikes cotés."""
+    g = g.sort_values("k")
+    return float(np.interp(k, g.k.to_numpy(float), g.iv.to_numpy(float)))
+
+
+def iv_at(pts: pd.DataFrame, K: float, T: float) -> dict:
+    """Vol implicite et forward pour un strike K et une maturité T (années), lus sur la surface de marché.
+
+    Standard desk : interpolation en k = ln(K/F) dans chaque échéance, puis linéaire en variance totale
+    w = σ²T entre les deux échéances encadrantes (à k constant, absence d'arbitrage calendaire si w croît).
+    Avant la première échéance : vol de la première (plate) ; après la dernière : vol de la dernière.
+    Le forward est interpolé de la même façon via le portage implicite ln(F/S)/T.
+    """
+    if K <= 0 or T <= 0:
+        raise ValueError("K et T doivent être positifs")
+    sl = sorted(((float(t), g) for t, g in pts.groupby("T")), key=lambda x: x[0])
+    if not sl:
+        raise VolSurfaceError("Surface vide")
+    Ts = [t for t, _ in sl]
+
+    def one(t: float, g: pd.DataFrame) -> tuple[float, float]:
+        F = float(g.F.iloc[0])
+        return _slice_iv(g, math.log(K / F)), F
+
+    if T <= Ts[0]:
+        iv, F0 = one(*sl[0])
+        return {"iv": iv, "T_used": [Ts[0]], "extrapolated": T < Ts[0], "carry_slices": [(Ts[0], F0)]}
+    if T >= Ts[-1]:
+        iv, F1 = one(*sl[-1])
+        return {"iv": iv, "T_used": [Ts[-1]], "extrapolated": T > Ts[-1], "carry_slices": [(Ts[-1], F1)]}
+    j = next(i for i, t in enumerate(Ts) if t >= T)
+    (t0, g0), (t1, g1) = sl[j - 1], sl[j]
+    v0, F0 = one(t0, g0)
+    v1, F1 = one(t1, g1)
+    w = v0 * v0 * t0 + (v1 * v1 * t1 - v0 * v0 * t0) * (T - t0) / (t1 - t0)
+    return {"iv": math.sqrt(max(w, 1e-12) / T), "T_used": [t0, t1], "extrapolated": False, "carry_slices": [(t0, F0), (t1, F1)]}
+
+
+def carry(spot: float, slices: list[tuple[float, float]], T: float) -> float:
+    """Portage annualisé b = ln(F/S)/T interpolé linéairement en T entre les échéances (r − q implicite)."""
+    bs = [(t, math.log(F / spot) / t) for t, F in slices]
+    if len(bs) == 1:
+        return bs[0][1]
+    (t0, b0), (t1, b1) = bs
+    return b0 + (b1 - b0) * (T - t0) / (t1 - t0)
+
+
+def lookup(points: list[dict], spot: float, strikes: list[float], T: float) -> dict:
+    """Interroge la surface sérialisée (`compute()["points"]`) : une vol par strike, forward et portage implicites."""
+    pts = pd.DataFrame(points)
+    if pts.empty:
+        raise VolSurfaceError("Surface vide")
+    out = [iv_at(pts, K, T) for K in strikes]
+    b = carry(spot, out[0]["carry_slices"], T)
+    return {"T": T, "spot": spot, "carry": b, "forward": spot * math.exp(b * T), "extrapolated": out[0]["extrapolated"],
+            "expiries_used": out[0]["T_used"], "strikes": strikes, "iv": [o["iv"] for o in out]}
+
 # ---------------------------------------------------------------- Vol réalisée
 
 def realized_vol(closes: np.ndarray, window: int) -> np.ndarray:

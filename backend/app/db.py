@@ -49,3 +49,7 @@ def conn():
 def init():
     with conn() as c:
         c.executescript(SCHEMA)
+        # migrations légères : colonnes ajoutées après la création des bases existantes
+        cols = {r["name"] for r in c.execute("PRAGMA table_info(news)")}
+        if "image" not in cols:
+            c.execute("ALTER TABLE news ADD COLUMN image TEXT NOT NULL DEFAULT ''")

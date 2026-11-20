@@ -41,7 +41,7 @@ export default function OMON() {
       orient: "horizontal", left: "center", bottom: 0, itemHeight: 120, textStyle: { color: "#7486a0" }, inRange: { color: ["#0b3a6e", "#1fd15f", "#ffa028", "#ff4d4d"] } },
     series: [{ type: "heatmap", data: surf.data.grid.flatMap((g, y) => g.iv.map((v, x) => (v == null ? null : [x, y, v])).filter(Boolean)), label: { show: surf.data.grid.length < 14, color: "#000", fontSize: 9, formatter: (p: any) => num(p.value[2], 0) } }],
   }, [surf.data]);
-  const toOvme = (k: number, type: "call" | "put", x?: Side) => router.push(`/ovme?S=${d!.underlying}&K=${k}&T=${d!.T.toFixed(4)}&type=${type}${x?.iv ? `&vol=${(x.iv * 100).toFixed(2)}` : ""}${x ? `&px=${((x.bid + x.ask) / 2).toFixed(3)}` : ""}&s=${encodeURIComponent(s)}`);
+  const toOvme = (k: number, type: "call" | "put", x?: Side) => router.push(`/ovme?S=${d!.underlying}&K=${k}&T=${d!.T.toFixed(4)}&type=${type}${x?.iv ? `&vol=${(x.iv * 100).toFixed(2)}` : ""}${x ? `&px=${((x.bid + x.ask) / 2).toFixed(3)}` : ""}&s=${encodeURIComponent(s)}&mkt=1`);
   const cell = (x: Side | undefined, k: string, f: (v: number) => string) => (x && (x as any)[k] != null ? f((x as any)[k]) : "–");
   return (
     <div className="grid h-full grid-cols-12 gap-1 overflow-auto">
@@ -67,7 +67,7 @@ export default function OMON() {
             </tr>;
           })}</tbody>
         </table>}
-        <div className="px-2 py-1 text-[10px] text-dim">Fond coloré : dans la monnaie. VI et grecques calculées par la CBOE. Clic sur une ligne : valorisation dans OVME. Options cotées aux États-Unis uniquement.</div>
+        <div className="px-2 py-1 text-[10px] text-dim">Fond coloré : dans la monnaie. VI et grecques calculées par la CBOE. Clic sur une ligne : valorisation dans OVME au marché (smile de la surface VOL, écart du prix coté vs surface). Options cotées aux États-Unis uniquement.</div>
       </Panel>
       <Panel className="col-span-12 md:col-span-6 xl:col-span-4" title="Surface de volatilité implicite" right={<SourceTag env={surf.env} />}>
         <State loading={surf.loading && !surf.data} error={surf.error} />

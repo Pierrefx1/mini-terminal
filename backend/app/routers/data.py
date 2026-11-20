@@ -16,8 +16,14 @@ COUNTRIES = [("US", "États-Unis", None, "US"), ("XC", "Zone euro", "EA20", "XM"
              ("PL", "Pologne", "PL", None), ("GB", "Royaume-Uni", None, "GB"), ("CH", "Suisse", "CH", "CH"), ("NO", "Norvège", "NO", None), ("JP", "Japon", None, "JP"),
              ("CN", "Chine", None, "CN"), ("IN", "Inde", None, None), ("KR", "Corée du Sud", None, None), ("CA", "Canada", None, "CA"), ("AU", "Australie", None, "AU"),
              ("BR", "Brésil", None, None), ("MX", "Mexique", None, None), ("TR", "Turquie", "TR", None), ("ZA", "Afrique du Sud", None, None), ("ID", "Indonésie", None, None),
-             ("SA", "Arabie saoudite", None, None)]
+             ("SA", "Arabie saoudite", None, None),
+             # autres pays de l'UE (Eurostat mensuel/trimestriel) et membres de la zone euro (taux BCE)
+             ("SK", "Slovaquie", "SK", "XM"), ("SI", "Slovénie", "SI", "XM"), ("LT", "Lituanie", "LT", "XM"), ("LV", "Lettonie", "LV", "XM"),
+             ("EE", "Estonie", "EE", "XM"), ("LU", "Luxembourg", "LU", "XM"), ("CY", "Chypre", "CY", "XM"), ("MT", "Malte", "MT", "XM"),
+             ("HR", "Croatie", "HR", "XM"), ("CZ", "Tchéquie", "CZ", None), ("HU", "Hongrie", "HU", None), ("RO", "Roumanie", "RO", None),
+             ("BG", "Bulgarie", "BG", None)]
 C = {c[0]: c for c in COUNTRIES}
+NAME = {c[0]: c[1] for c in COUNTRIES}
 # clé, libellé, catégorie, unité, source, code, filtres Eurostat, fréquence
 IND = [
     ("gdp_growth", "Croissance du PIB réel", "PIB", "% annuel", "wb", "NY.GDP.MKTP.KD.ZG", None, "A"),
@@ -58,12 +64,33 @@ def _iso(period: str) -> str:
 
 def _eurostat(key: str) -> dict:
     i = I[key]
-    return cached(f"es:{key}", 12 * 3600, es.name, lambda: es.fetch(i[5], i[6], GEOS))
+    return cached(f"es2:{key}", 12 * 3600, es.name, lambda: es.fetch(i[5], i[6], GEOS))
+
+
+def _world() -> dict[str, dict]:
+    """Tous les pays de la Banque mondiale, par code ISO2."""
+    e = cached("wb:countries", 7 * 86400, wb.name, wb.countries)
+    return {c["code"]: c for c in e["data"]}
+
+
+def _policy() -> dict:
+    """Taux directeurs de toutes les banques centrales suivies par la BRI."""
+    return cached("policy:all", 6 * 3600, policy.name, lambda: policy.policy_rates(all_areas=True))
+
+
+def _meta(code: str) -> tuple:
+    """(code, nom, code Eurostat, zone BRI) pour n'importe quel pays : configuration détaillée, sinon Banque mondiale."""
+    if code in C:
+        return C[code]
+    w = _world().get(code)
+    if not w:
+        raise HTTPException(404, "Pays inconnu")
+    return (code, w["name"], None, code)
 
 
 def _obs(key: str, country: str) -> tuple[list, dict] | None:
     """Observations [[période, valeur]] d'un indicateur pour un pays + enveloppe de la source."""
-    i, c = I[key], C[country]
+    i, c = I[key], _meta(country)
     if i[4] == "wb":
         e = cached(f"wb:{country}", 24 * 3600, wb.name, lambda: wb.fetch([country], WB_CODES))
         obs = e["data"].get(i[5], {}).get(country)
@@ -73,10 +100,11 @@ def _obs(key: str, country: str) -> tuple[list, dict] | None:
         e = _eurostat(key)
         obs = e["data"].get(c[2])
     else:
-        if not c[3]:
+        area = c[3] or (country if country != "XC" else None)  # sans zone explicite : la BRI publie sous le code ISO2 du pays
+        if not area:
             return None
-        e = cached("policy", 6 * 3600, policy.name, policy.policy_rates)
-        obs = next((b["steps"] for b in e["data"]["banks"] if b["area"] == c[3]), None)
+        e = _policy()
+        obs = next((b["steps"] for b in e["data"]["banks"] if b["area"] == area), None)
         if obs and len(obs) > 1 and obs[-1][1] == obs[-2][1]:
             obs = obs[:-1]  # le dernier point ne fait que prolonger le palier : la période affichée est la date du dernier mouvement
     return (obs, e) if obs else None
@@ -84,14 +112,40 @@ def _obs(key: str, country: str) -> tuple[list, dict] | None:
 
 @router.get("/catalog")
 def catalog():
-    return {"countries": [{"code": c[0], "name": c[1]} for c in COUNTRIES],
+    try:
+        world = [{**w, "detailed": w["code"] in C} for w in _world().values()]
+    except HTTPException:
+        world = []
+    return {"countries": [{"code": c[0], "name": c[1]} for c in COUNTRIES], "world": world,
             "indicators": [{"key": i[0], "label": i[1], "category": i[2], "unit": i[3], "freq": i[7]} for i in IND]}
+
+
+@router.get("/map")
+def world_map(key: str = "gdp_growth"):
+    """Dernière valeur de chaque pays pour un indicateur (carte choroplèthe) : {ISO2: {v, period}}."""
+    if key not in I:
+        raise HTTPException(404, "Indicateur inconnu")
+    i = I[key]
+    if i[4] == "wb":
+        e = cached(f"wb:latest:{i[5]}", 24 * 3600, wb.name, lambda: wb.latest(i[5]))
+        values = {c: {"v": v, "period": p} for c, (p, v) in e["data"].items()}
+    elif i[4] == "es":
+        e = _eurostat(key)
+        by_geo = {c[2]: c[0] for c in COUNTRIES if c[2]}
+        values = {by_geo[g]: {"v": obs[-1][1], "period": obs[-1][0]} for g, obs in e["data"].items() if g in by_geo and obs}
+    else:
+        e = _policy()
+        rates = {b["area"]: {"v": b["rate"], "period": b["last_change"]} for b in e["data"]["banks"]}
+        values = {c: rates[c] for c in rates if len(c) == 2 and c != "XM"}
+        if "XM" in rates:  # pays de la zone euro : taux de la BCE
+            values.update({c[0]: rates["XM"] for c in COUNTRIES if c[3] == "XM" and c[0] != "XC"})
+    return {"data": {"key": key, "label": i[1], "unit": i[3], "freq": i[7], "values": values},
+            "source": e["source"], "fetched_at": e["fetched_at"], "stale": e["stale"], "error": e["error"]}
 
 
 @router.get("/table")
 def table(country: str = "FR"):
-    if country not in C:
-        raise HTTPException(404, "Pays inconnu")
+    meta = _meta(country)
     rows, envs, errors = [], [], []
     for i in IND:
         try:
@@ -105,11 +159,14 @@ def table(country: str = "FR"):
         envs.append(e)
         rows.append({"key": i[0], "label": i[1], "category": i[2], "unit": i[3], "freq": i[7], "source": e["source"], "last": obs[-1][1], "period": obs[-1][0],
                      "previous": obs[-2][1] if len(obs) > 1 else None, "spark": [o[1] for o in obs[-24:]]})
+    if not rows and not errors:
+        raise HTTPException(404, detail={"source": "Data", "error": f"Aucune donnée publiée pour {meta[1]}"})
     if not rows and errors:
         raise HTTPException(502, detail={"source": "Data", "error": " ; ".join(dict.fromkeys(errors))})
     stale = [e for e in envs if e["stale"]]
     err = "; ".join(dict.fromkeys(errors + [e["error"] for e in stale]))
-    return {"data": {"country": C[country][1], "rows": rows}, "source": " + ".join(dict.fromkeys(e["source"] for e in envs)),
+    w = _world().get(country, {}) if country != "XC" else {}
+    return {"data": {"country": meta[1], "code": country, "region": w.get("region"), "income": w.get("income"), "detailed": country in C, "rows": rows}, "source": " + ".join(dict.fromkeys(e["source"] for e in envs)),
             "fetched_at": min(e["fetched_at"] for e in envs), "stale": bool(err), "error": err or None}
 
 
@@ -118,10 +175,14 @@ def series(key: str, countries: str = "FR"):
     if key not in I:
         raise HTTPException(404, "Indicateur inconnu")
     i, out, envs = I[key], [], []
-    for c in [x for x in countries.split(",") if x in C]:
-        r = _obs(key, c)
+    for c in [x.strip().upper() for x in countries.split(",") if x.strip()][:12]:
+        try:
+            meta = _meta(c)
+            r = _obs(key, c)
+        except HTTPException:
+            continue
         if r:
-            out.append({"country": c, "name": C[c][1], "obs": [[_iso(p), v, str(p)] for p, v in r[0]]})
+            out.append({"country": c, "name": meta[1], "obs": [[_iso(p), v, str(p)] for p, v in r[0]]})
             envs.append(r[1])
     if not envs:
         raise HTTPException(404, detail={"source": "Data", "error": "Indicateur non disponible pour ces pays"})

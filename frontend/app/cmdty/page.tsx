@@ -354,14 +354,13 @@ export default function Commodities() {
   const sp = useSearchParams(); const router = useRouter();
   const tab = (sp.get("tab") as Tab) || "board";
   const k = sp.get("k") || "WTI";
-  const go = (t: string, key = k) => router.replace(`/cmdty?tab=${t}&k=${key}${sp.get("embed") === "1" ? "&embed=1" : ""}`);
+  const go = (t: string, key = k) => router.replace(`/cmdty?tab=${t}&k=${key}`);
   return (
     <div className="flex h-full flex-col gap-1">
-      {/* dans une fenêtre de l'espace de travail, l'en-tête de la fenêtre choisit déjà la vue */}
-      {sp.get("embed") !== "1" && <div className="flex shrink-0 flex-wrap items-center gap-2 border border-line bg-panel px-2 py-1">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border border-line bg-panel px-2 py-1">
         <span className="text-[11px] uppercase tracking-wider text-amber">CMDTY · matières premières</span>
         <Seg value={tab} options={TABS as unknown as [Tab, string][]} onChange={(t) => go(t)} />
-      </div>}
+      </div>
       <div className="min-h-0 flex-1">
         {tab === "board" && <BoardTab />}
         {tab === "curve" && <CurveTab k={k} setK={(x) => go("curve", x)} />}
