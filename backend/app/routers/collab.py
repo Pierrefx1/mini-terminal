@@ -201,8 +201,7 @@ def export_xlsx(body: Export):
 @router.get("/research/brief")
 def brief(symbol: str, force: bool = False):
     """Note de synthèse sur un actif, rédigée par Gemini à partir des seules données du terminal (cours, statistiques, états financiers, news)."""
-    from google import genai
-    from google.genai import errors, types
+    from .. import gemini
     from . import analysis, overview, news
 
     def fetch():
@@ -223,16 +222,12 @@ def brief(symbol: str, force: bool = False):
             ctx["news"] = [n["title"] for n in news.news(symbol=symbol, limit=15)["data"]["items"]]
         except Exception:
             ctx["news"] = []
-        try:
-            resp = genai.Client(api_key=config.GEMINI_API_KEY).models.generate_content(
-                model=config.RECAP_MODEL,
-                contents="Données (JSON) :\n" + json.dumps(ctx, ensure_ascii=False, default=str),
-                config=types.GenerateContentConfig(system_instruction=(
-                    "Tu es analyste sell-side. Rédige en français une note de recherche concise et factuelle sur l'actif, en Markdown, "
-                    "avec les sections : Synthèse, Dynamique de marché, Fondamentaux (si disponibles), Actualité, Risques, Points à surveiller. "
-                    "N'utilise QUE les données fournies ; cite les chiffres ; n'invente aucun objectif de cours ni consensus ; "
-                    "si une donnée manque, dis-le. Pas de recommandation d'achat ou de vente.")))
-        except errors.APIError as e:
-            raise SourceError(f"API Gemini : erreur {e.code} ({e.message}).")
-        return {"symbol": symbol, "markdown": resp.text, "model": config.RECAP_MODEL, "inputs": list(ctx)}
+        resp, model = gemini.generate(
+            "Données (JSON) :\n" + json.dumps(ctx, ensure_ascii=False, default=str),
+            system_instruction=(
+                "Tu es analyste sell-side. Rédige en français une note de recherche concise et factuelle sur l'actif, en Markdown, "
+                "avec les sections : Synthèse, Dynamique de marché, Fondamentaux (si disponibles), Actualité, Risques, Points à surveiller. "
+                "N'utilise QUE les données fournies ; cite les chiffres ; n'invente aucun objectif de cours ni consensus ; "
+                "si une donnée manque, dis-le. Pas de recommandation d'achat ou de vente."))
+        return {"symbol": symbol, "markdown": resp.text, "model": model, "inputs": list(ctx)}
     return cached(f"brief:{symbol.upper()}", 6 * 3600, "Google Gemini (texte généré)", fetch, force=force)

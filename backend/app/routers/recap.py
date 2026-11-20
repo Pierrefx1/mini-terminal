@@ -10,11 +10,9 @@ from typing import Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter
-from google import genai
-from google.genai import errors, types
 from pydantic import BaseModel, Field
 
-from .. import config, db
+from .. import config, db, gemini
 from ..cache import SourceError, cached
 from . import calendar, forecasts, macro, market, news, screener
 
@@ -107,29 +105,15 @@ def _generate() -> dict:
     ctx = _context()
     if not ctx.get("cours") and not ctx.get("news_24h"):
         raise SourceError("Aucune donnée de marché ni news disponible pour rédiger le récap.")
-    try:
-        client = genai.Client(api_key=config.GEMINI_API_KEY)
-        resp = client.models.generate_content(
-            model=config.RECAP_MODEL,
-            contents="Données du terminal (JSON) :\n" + json.dumps(ctx, ensure_ascii=False, default=str)
-                     + "\n\nRédige le récap marché de ce matin.",
-            config=types.GenerateContentConfig(system_instruction=SYSTEM, response_mime_type="application/json", response_schema=Recap),
-        )
-    except errors.ClientError as e:
-        if e.code in (401, 403) or "API key" in str(e):
-            raise SourceError("Clé Gemini invalide ou non autorisée : vérifier GEMINI_API_KEY dans .env.")
-        if e.code == 429:
-            raise SourceError("Quota de l'API Gemini atteint, réessayer plus tard.")
-        raise SourceError(f"API Gemini : erreur {e.code} ({e.message}).")
-    except errors.APIError as e:
-        raise SourceError(f"API Gemini : erreur {e.code} ({e.message}).")
-    except OSError as e:
-        raise SourceError(f"API Gemini injoignable ({e}).")
+    resp, model = gemini.generate(
+        "Données du terminal (JSON) :\n" + json.dumps(ctx, ensure_ascii=False, default=str)
+        + "\n\nRédige le récap marché de ce matin.",
+        system_instruction=SYSTEM, response_mime_type="application/json", response_schema=Recap)
     out = resp.parsed
     if not isinstance(out, Recap):
         reason = resp.candidates[0].finish_reason if resp.candidates else getattr(resp.prompt_feedback, "block_reason", None)
         raise SourceError(f"Récap non généré (arrêt : {reason}).")
-    return {**out.model_dump(), "model": resp.model_version or config.RECAP_MODEL, "news_count": len(ctx["news_24h"])}
+    return {**out.model_dump(), "model": model, "news_count": len(ctx["news_24h"])}
 
 
 def _age_limit() -> float:
