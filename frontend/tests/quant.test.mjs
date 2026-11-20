@@ -107,6 +107,24 @@ test("valorisation : CAPM, WACC, DCF", () => {
   assert.deepEqual(Q.projectFcf(100, [0.1, 0.1]).map((x) => Math.round(x * 100) / 100), [110, 121]);
 });
 
+test("DCF inversé : retrouve la croissance qui a servi à fixer le cours", () => {
+  const p = { fcf0: 100, years: 5, wacc: 0.09, terminalGrowth: 0.025, netDebt: 200, shares: 10 };
+  for (const g of [-0.05, 0, 0.07, 0.25]) {
+    const price = Q.dcf({ fcf: Q.projectFcf(p.fcf0, Array(5).fill(g)), wacc: p.wacc, terminalGrowth: p.terminalGrowth, netDebt: p.netDebt, shares: p.shares }).perShare;
+    near(Q.impliedGrowth(price, p), g, 1e-9, `g=${g}`);
+  }
+  assert.equal(Q.impliedGrowth(100, { ...p, fcf0: -5 }), null);           // FCF négatif : pas de réponse
+  assert.equal(Q.impliedGrowth(1e9, p), null);                            // cours hors d'atteinte
+  assert.equal(Q.impliedGrowth(100, { ...p, wacc: 0.02 }), null);         // WACC ≤ g terminale
+});
+
+test("médiane", () => {
+  assert.equal(Q.median([3, 1, 2]), 2);
+  assert.equal(Q.median([4, 1, 3, 2]), 2.5);
+  assert.equal(Q.median([NaN, 5]), 5);
+  assert.equal(Q.median([]), null);
+});
+
 test("paper trading : exécution, prix moyen, P&L réalisé et latent", () => {
   const costs = { spreadBps: 0, impactCoef: 0, feeBps: 0, minFee: 0 };
   const q = { AAPL: { last: 100, bid: 99.9, ask: 100.1 } };

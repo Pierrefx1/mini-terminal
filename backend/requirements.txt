@@ -3,6 +3,9 @@ uvicorn[standard]
 httpx
 pandas
 numpy
+scipy
+yfinance
+plotly
 apscheduler
 feedparser
 python-dotenv

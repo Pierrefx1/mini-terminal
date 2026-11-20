@@ -25,6 +25,8 @@ Créé au premier lancement à partir de `.env.example`.
 | `RECAP_MODEL` | Modèle Gemini du récap et des notes de recherche (défaut `gemini-3.8-flash`). |
 | `EIA_API_KEY` | Clé gratuite (eia.gov/opendata). Stocks de pétrole et de gaz du module matières premières ; sans elle, la clé de démonstration publique, vite épuisée. |
 
+Facultatif : `VOL_WATCH` (défaut `SPY,QQQ,IWM`), sous-jacents dont la surface est capturée chaque jour de bourse à 15 h 30 (New York) pour l'historique de VOL.
+
 Relancer après modification.
 
 ## Commandes
@@ -44,6 +46,9 @@ Syntaxe : `<instrument> <FONCTION>` ou `<FONCTION> [instrument]`, puis Entrée. 
 | `BRENT CMDTY`, `GOLD COT` | Courbe à terme du Brent, positionnement CFTC sur l'or |
 | `AAPL US Equity FA`, `MC FP Equity DCF` | Analyse fondamentale, valorisation |
 | `SPX OMON`, `OVME` | Chaîne d'options du S&P 500, pricer d'options |
+| `VOL`, `VOL QQQ` | Surface de volatilité implicite 3D, structure par terme ATM, smile, skew et butterfly 90/110 (SPY par défaut) ; IV 30 j vs vol réalisée 20/60 j, historique quotidien des métriques 30 j |
+| `WM` | World Monitor : globe 3D des risques géopolitiques (rouge), informations économiques (bleu), événements majeurs (orange) et places financières (blanc), avec liens entre places (corrélation 60 séances), corridors énergétiques et commerciaux, fil international |
+| `SRC` | État des sources de données : dernier succès, dernière erreur, taux d'échec, latence |
 | `YAS`, `EURUSD Curncy FWCV` | Obligataire, change à terme |
 | `TRADE`, `PORT`, `RISK` | Paper trading, portefeuilles, risque |
 | `RES`, `ALRT`, `MSG`, `WS` | Recherche, alertes, messagerie, espace de travail |
@@ -57,6 +62,7 @@ Clavier : `⌘K` ou `/` pour la barre de commandes (taper une lettre n'importe o
 | WEI, DES, graphique, bandeau, watchlist | Yahoo Finance | Cours différés (DELAYED), API non officielle ; MSCI World approché par l'ETF URTH |
 | Matières premières | Yahoo (contrats par échéance), EIA, CFTC | Électricité, charbon, métaux LME : sous licence, non couverts |
 | Options, paper trading | CBOE (chaînes, bid/ask différés) | Options américaines uniquement ; exécutions simulées |
+| Surface de volatilité (VOL) | Yahoo Finance via yfinance | Différé ; Yahoo ne publie pas de bid/ask hors séance US (15 h 30 – 22 h à Paris) : la surface n'est calculable qu'en séance, sinon la dernière surface connue est affichée « PÉRIMÉ » |
 | Obligataire, change | U.S. Treasury, BCE, FRED (OCDE, ICE BofA), BRI | Pas de cotations d'obligations individuelles ni de volatilité implicite des devises |
 | Analyse fondamentale | Yahoo (états publiés) | Consensus et actionnariat sous licence, non affichés |
 | Portefeuille et risque | Yahoo (cours ajustés), calculs du terminal | Données saisies gardées dans le navigateur |

@@ -5,6 +5,7 @@ export type NavGroup = { title: string; color: string; items: NavItem[] };
 export const NAV: NavGroup[] = [
   { title: "Marchés", color: "#ffa028", items: [
     { code: "WEI", href: "/wei", label: "Vue mondiale", icon: "globe", desc: "Indices mondiaux, volatilité, carte des places, largeur de marché", example: "WEI" },
+    { code: "WM", href: "/wm", label: "World Monitor", icon: "radar", desc: "Globe 3D : risques géopolitiques, publications, places financières, flux", example: "WM" },
     { code: "HOME", href: "/", label: "Accueil", icon: "home", desc: "Récap IA du matin, publications à venir, dernières news", example: "HOME" },
     { code: "WS", href: "/ws", label: "Espace de travail", icon: "windows", desc: "Plusieurs modules côte à côte, profils Trader, Analyste, PM, Quant", example: "WS" },
   ] },
@@ -29,6 +30,7 @@ export const NAV: NavGroup[] = [
   { title: "Dérivés", color: "#00d1c1", items: [
     { code: "OMON", href: "/omon", label: "Options", icon: "layers", desc: "Chaîne d'options, surface de volatilité, put/call", example: "SPX OMON" },
     { code: "OVME", href: "/ovme", label: "Pricer", icon: "sigma", desc: "Black-Scholes, binomial, Monte Carlo, grecques, stratégies", example: "OVME" },
+    { code: "VOL", href: "/vol", label: "Vol Surface", icon: "surface", desc: "Surface de volatilité 3D, structure par terme ATM, smile, skew et butterfly", example: "VOL SPY" },
   ] },
   { title: "Économie", color: "#1fd15f", items: [
     { code: "ECST", href: "/econ", label: "Banques centrales", icon: "bank", desc: "Taux directeurs, décisions, impact des publications", example: "ECST" },
@@ -48,6 +50,7 @@ export const NAV: NavGroup[] = [
   ] },
   { title: "Outils", color: "#9aa0a6", items: [
     { code: "MSG", href: "/msg", label: "Messagerie", icon: "chat", desc: "Discussions entre utilisateurs, partage de cotations", example: "MSG" },
+    { code: "SRC", href: "/src", label: "État des sources", icon: "status", desc: "Sources de données en échec, dernier succès, taux d'erreur, latence", example: "SRC" },
     { code: "HELP", href: "/help", label: "Aide", icon: "help", desc: "Toutes les commandes, instruments reconnus, raccourcis", example: "HELP" },
   ] },
 ];

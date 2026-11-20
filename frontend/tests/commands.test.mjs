@@ -82,6 +82,11 @@ test("autocomplétion", () => {
 test("modules : analyse, marchés, trading, gestion", () => {
   assert.equal(go("AAPL US Equity FA").href, "/fa?s=AAPL");
   assert.equal(go("SPX OMON").href, "/omon?s=%5EGSPC");
+  assert.equal(go("VOL").href, "/vol");
+  assert.equal(go("VOL QQQ").href, "/vol?s=QQQ");
+  assert.equal(go("SPY US Equity VOL").href, "/vol?s=SPY");
+  assert.equal(go("SRC").href, "/src");
+  assert.equal(go("WM").href, "/wm");
   assert.equal(go("BRENT CMDTY").href, "/cmdty?tab=curve&k=BRENT");
   assert.equal(go("CMDTY").href, "/cmdty");
   assert.equal(go("GOLD COT").href, "/cmdty?tab=cot&k=GC");

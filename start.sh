@@ -8,12 +8,17 @@ if [ ! -x backend/.venv/bin/uvicorn ]; then
   echo "→ Installation du backend…"
   "$PY" -m venv backend/.venv
   backend/.venv/bin/pip install -q -r backend/requirements.txt
+  touch backend/.venv/.deps
+elif [ backend/requirements.txt -nt backend/.venv/.deps ]; then
+  echo "→ Mise à jour des dépendances du backend…"
+  backend/.venv/bin/pip install -q -r backend/requirements.txt
+  touch backend/.venv/.deps
 fi
-if [ ! -d frontend/node_modules ]; then
+if [ ! -d frontend/node_modules ] || [ frontend/package.json -nt frontend/node_modules/.package-lock.json ]; then
   echo "→ Installation de l'interface…"
   (cd frontend && npm install --silent)
 fi
-if [ ! -f frontend/.next/BUILD_ID ] || [ -n "$(find frontend/app frontend/components frontend/lib frontend/next.config.ts -newer frontend/.next/BUILD_ID 2>/dev/null | head -1)" ]; then
+if [ ! -f frontend/.next/BUILD_ID ] || [ -n "$(find frontend/app frontend/components frontend/lib frontend/types frontend/next.config.ts frontend/package.json -newer frontend/.next/BUILD_ID 2>/dev/null | head -1)" ]; then
   echo "→ Construction de l'interface…"
   (cd frontend && npm run build --silent)
 fi

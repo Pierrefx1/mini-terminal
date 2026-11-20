@@ -20,6 +20,16 @@ CREATE TABLE IF NOT EXISTS calendar_events (
 );
 CREATE INDEX IF NOT EXISTS calendar_time ON calendar_events(time);
 CREATE TABLE IF NOT EXISTS prefs (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+-- Une ligne par sous-jacent et par séance (date de New York) : dernière surface calculée ce jour-là
+CREATE TABLE IF NOT EXISTS vol_history (
+  ticker TEXT NOT NULL, date TEXT NOT NULL, spot REAL, atm30 REAL, skew30 REAL, fly30 REAL, atm90 REAL, skew90 REAL,
+  n_points INTEGER, updated_at TEXT NOT NULL, PRIMARY KEY (ticker, date)
+);
+-- État de chaque source de données : dernier succès, dernière erreur, compteurs (alimenté par cache.cached)
+CREATE TABLE IF NOT EXISTS source_health (
+  source TEXT PRIMARY KEY, last_ok TEXT, last_error_at TEXT, last_error TEXT,
+  ok_count INTEGER NOT NULL DEFAULT 0, err_count INTEGER NOT NULL DEFAULT 0, last_ms INTEGER
+);
 """
 
 

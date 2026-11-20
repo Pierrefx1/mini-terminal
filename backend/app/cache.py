@@ -5,6 +5,7 @@ son horodatage, et un indicateur `stale` (+ l'erreur) si la source a échoué.
 """
 import json
 import threading
+import time
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -27,6 +28,22 @@ def _now() -> datetime:
 def _lock(key: str) -> threading.Lock:
     with _guard:
         return _locks.setdefault(key, threading.Lock())
+
+
+def record_health(source: str, ok: bool, error: str | None = None, seconds: float | None = None) -> None:
+    """Met à jour l'état de la source (page SRC). Ne doit jamais faire échouer la requête de données."""
+    ts = _now().isoformat(timespec="seconds")
+    ms = None if seconds is None else int(seconds * 1000)
+    try:
+        with db.conn() as c:
+            c.execute("INSERT OR IGNORE INTO source_health (source) VALUES (?)", (source,))
+            if ok:
+                c.execute("UPDATE source_health SET last_ok=?, ok_count=ok_count+1, last_ms=? WHERE source=?", (ts, ms, source))
+            else:
+                c.execute("UPDATE source_health SET last_error_at=?, last_error=?, err_count=err_count+1, last_ms=? WHERE source=?",
+                          (ts, (error or "")[:500], ms, source))
+    except Exception:
+        pass
 
 
 def _read(key: str):
@@ -54,13 +71,17 @@ def cached(key: str, ttl: int, source: str, fetch: Callable[[], Any], force: boo
             again = _read(key)
             if again and (not row or again["fetched_at"] != row["fetched_at"]):
                 return _envelope(again, status=status)
+        t0 = time.monotonic()
         try:
             data = fetch()
         except Exception as e:  # repli sur la dernière valeur connue
             msg = str(e) if isinstance(e, SourceError) else f"{type(e).__name__}: {e}"
+            # SourceError = réponse explicite de la source (ticker sans options…) : la source fonctionne
+            record_health(source, isinstance(e, SourceError), None if isinstance(e, SourceError) else msg, time.monotonic() - t0)
             if row:
                 return _envelope(row, stale=True, error=msg, status=status)
             raise HTTPException(502, detail={"source": source, "error": msg})
+        record_health(source, True, None, time.monotonic() - t0)
         ts = _now().isoformat(timespec="seconds")
         with db.conn() as c:
             c.execute("INSERT OR REPLACE INTO cache VALUES (?,?,?,?)",

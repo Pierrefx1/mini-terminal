@@ -300,6 +300,30 @@ export function dcf({ fcf, wacc: w, terminalGrowth: g, netDebt, shares }: DcfIn)
 /** Projection des flux : FCF de départ et taux de croissance annuels. */
 export const projectFcf = (fcf0: number, growth: number[]) => growth.reduce<number[]>((acc, g) => [...acc, (acc.at(-1) ?? fcf0) * (1 + g)], []);
 
+/**
+ * DCF inversé : croissance annuelle constante du FCF (sur `years` ans, puis croissance terminale) qui donne
+ * une valeur par action égale au cours. Résolution par dichotomie (la valeur croît avec la croissance quand FCF > 0).
+ * null si le FCF de départ n'est pas positif ou si aucune croissance entre −50 % et +100 % ne convient.
+ */
+export function impliedGrowth(target: number, p: { fcf0: number; years: number; wacc: number; terminalGrowth: number; netDebt: number; shares: number }): number | null {
+  if (!(p.fcf0 > 0) || !(p.wacc > p.terminalGrowth) || !Number.isFinite(target)) return null;
+  const value = (g: number) => dcf({ fcf: projectFcf(p.fcf0, Array(p.years).fill(g)), wacc: p.wacc, terminalGrowth: p.terminalGrowth, netDebt: p.netDebt, shares: p.shares }).perShare;
+  let lo = -0.5, hi = 1;
+  if (value(lo) > target || value(hi) < target) return null;
+  for (let i = 0; i < 80; i++) {
+    const mid = (lo + hi) / 2;
+    if (value(mid) < target) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+export function median(x: number[]): number | null {
+  const v = x.filter(Number.isFinite).sort((a, b) => a - b);
+  if (!v.length) return null;
+  const m = v.length >> 1;
+  return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+}
+
 // ───────────────────────── Statistiques ─────────────────────────
 export const logReturns = (x: number[]) => x.slice(1).map((v, i) => Math.log(v / x[i]));
 export function stdev(x: number[]) { const m = x.reduce((a, b) => a + b, 0) / x.length; return Math.sqrt(x.reduce((a, b) => a + (b - m) ** 2, 0) / (x.length - 1)); }

@@ -26,6 +26,7 @@ const q = (s?: Security) => (s ? `?s=${encodeURIComponent(s.symbol)}` : "");
 
 export const FUNCTIONS: Fn[] = [
   { code: "WEI", label: "Vue globale des marchés mondiaux", security: "none", route: () => "/wei", example: "WEI" },
+  { code: "WM", label: "World Monitor : globe des risques géopolitiques, publications, places financières et flux", security: "none", route: () => "/wm", example: "WM" },
   { code: "DES", label: "Description d'un instrument", security: "required", route: (s) => `/des${q(s)}`, example: "AAPL US Equity DES" },
   { code: "GP", label: "Graphique (bougies, indicateurs, comparaison)", security: "required", route: (s) => `/graphique${q(s)}`, example: "BRENT GP" },
   { code: "NEWS", label: "Centre d'actualités, ou actualités d'un instrument", security: "optional", route: (s) => `/news${q(s)}`, example: "NEWS NVDA" },
@@ -49,6 +50,7 @@ export const FUNCTIONS: Fn[] = [
   { code: "DESK", label: "Desk énergie et métaux", security: "none", route: () => "/cmdty?tab=desk", example: "DESK" },
   { code: "OMON", label: "Moniteur d'options (chaîne CBOE, surface de volatilité)", security: "required", route: (s) => `/omon${q(s)}`, example: "AAPL US Equity OMON" },
   { code: "OVME", label: "Valorisation d'options et stratégies", security: "optional", route: (s) => `/ovme${q(s)}`, example: "OVME" },
+  { code: "VOL", label: "Surface de volatilité implicite 3D, structure par terme, smile, skew (yfinance, Black-76)", security: "optional", route: (s) => `/vol${q(s)}`, example: "VOL QQQ" },
   { code: "ECST", label: "Economics : banques centrales, impact des publications", security: "none", route: () => "/econ", example: "ECST" },
   { code: "TRADE", label: "Paper trading : ordres, carnet, positions, P&L (simulé)", security: "optional", route: (s) => `/trade${q(s)}`, example: "AAPL US Equity TRADE" },
   { code: "PORT", label: "Portefeuilles : allocation, performance, expositions, rééquilibrage", security: "none", route: () => "/port", example: "PORT" },
@@ -57,6 +59,7 @@ export const FUNCTIONS: Fn[] = [
   { code: "ALRT", label: "Alertes de prix et d'actualité", security: "none", route: () => "/alerts", example: "ALRT" },
   { code: "MSG", label: "Messagerie entre utilisateurs", security: "none", route: () => "/msg", example: "MSG" },
   { code: "WS", label: "Espace de travail multi-fenêtres et profils", security: "none", route: () => "/ws", example: "WS" },
+  { code: "SRC", label: "État des sources de données : dernier succès, erreurs, latence", security: "none", route: () => "/src", example: "SRC" },
 ];
 
 /** Symbole de contrat -> clé du module matières premières. */
