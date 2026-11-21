@@ -90,7 +90,9 @@ test("modules : analyse, marchés, trading, gestion", () => {
   assert.equal(go("BRENT CMDTY").href, "/cmdty?tab=curve&k=BRENT");
   assert.equal(go("CMDTY").href, "/cmdty");
   assert.equal(go("GOLD COT").href, "/cmdty?tab=cot&k=GC");
-  assert.equal(go("EURUSD Curncy FWCV").href, "/fx?s=EURUSD%3DX");
+  assert.equal(go("EURUSD Curncy FWCV").href, "/fx?tab=tools&s=EURUSD%3DX");
+  assert.equal(go("EURUSD Curncy COT").href, "/fx?tab=cot&s=EURUSD%3DX");
+  assert.equal(go("USDJPY Curncy FX").href, "/fx?tab=pair&s=USDJPY%3DX");
   assert.equal(go("YAS").href, "/fi");
   for (const [c, h] of [["PORT", "/port"], ["RISK", "/risk"], ["ALRT", "/alerts"], ["MSG", "/msg"], ["ECST", "/econ"], ["OVME", "/ovme"], ["TRADE", "/trade"]]) assert.equal(go(c).href, h, c);
   assert.equal(go("MC FP Equity DCF").href, "/dcf?s=MC.PA");

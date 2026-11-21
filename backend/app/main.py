@@ -8,7 +8,7 @@ from fastapi import FastAPI
 
 from . import config, db
 from .cache import record_health
-from .routers import (analysis, calendar, collab, commodities, crypto, data, forecasts, macro, market, news, overview,
+from .routers import (analysis, calendar, collab, commodities, crypto, data, forecasts, fx, macro, market, news, overview,
                       portfolio, rates_fx, recap, screener, vol, world)
 
 log = logging.getLogger("market-terminal")
@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="MARKET TERMINAL", lifespan=lifespan)
 for r in (overview, market, macro, news, calendar, screener, data, forecasts, crypto, recap,
-          commodities, rates_fx, analysis, portfolio, collab, vol, world):
+          commodities, rates_fx, fx, analysis, portfolio, collab, vol, world):
     app.include_router(r.router)
 
 

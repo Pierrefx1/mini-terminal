@@ -2,7 +2,7 @@
 
 Terminal de marché en local, inspiré des terminaux professionnels et utilisable sans compte. On y navigue par commandes (`AAPL US Equity DES`, `BRENT GP`, `WEI`…). Chaque donnée affiche sa source, sa nature (LIVE, DELAYED, HISTORICAL, SIMULATED) et son heure de relevé.
 
-14 modules : vue globale des marchés, actions et analyse fondamentale, obligataire, change, matières premières (courbes à terme, spreads, stocks EIA, positionnement CFTC), options et pricer, économie, actualités, recherche, valorisation DCF, paper trading, portefeuilles, risque (VaR, stress tests), messagerie. Plus des alertes et l'export Excel.
+14 modules : vue globale des marchés, actions et analyse fondamentale, obligataire, change (force des devises, positionnement CFTC, corrélations), matières premières (courbes à terme, spreads, stocks EIA, positionnement CFTC), options et pricer, économie, actualités, recherche, valorisation DCF, paper trading, portefeuilles, risque (VaR, stress tests), messagerie. Plus des alertes et l'export Excel.
 
 Documentation : [architecture](docs/ARCHITECTURE.md) · [les 14 modules, leurs sources et leurs limites](docs/MVP.md)
 
@@ -44,6 +44,7 @@ Syntaxe : `<instrument> <FONCTION>` ou `<FONCTION> [instrument]`, puis Entrée. 
 | `NEWS NVDA` | Actualités de Nvidia |
 | `TOP`, `ECO` | Actualités principales, calendrier économique |
 | `BRENT CMDTY`, `GOLD COT` | Courbe à terme du Brent, positionnement CFTC sur l'or |
+| `FX`, `EURUSD Curncy FX`, `EURUSD Curncy COT` | Forex : vue d'ensemble (31 paires, force des devises, cours croisés, taux directeurs, agenda), analyse d'une paire (graphique, technique, portage, COT, corrélations, saisonnalité), positionnement CFTC des devises |
 | `AAPL US Equity FA`, `MC FP Equity DCF` | Analyse fondamentale, valorisation |
 | `SPX OMON`, `OVME` | Chaîne d'options du S&P 500, pricer d'options |
 | `VOL`, `VOL QQQ` | Surface de volatilité implicite 3D, structure par terme ATM, smile, skew et butterfly 90/110 (SPY par défaut) ; IV 30 j vs vol réalisée 20/60 j, historique quotidien des métriques 30 j |
@@ -63,7 +64,8 @@ Clavier : `⌘K` ou `/` pour la barre de commandes (taper une lettre n'importe o
 | Matières premières | Yahoo (contrats par échéance), EIA, CFTC | Électricité, charbon, métaux LME : sous licence, non couverts |
 | Options, paper trading | CBOE (chaînes, bid/ask différés) | Options américaines uniquement ; exécutions simulées |
 | Surface de volatilité (VOL) | Yahoo Finance via yfinance | Différé ; Yahoo ne publie pas de bid/ask hors séance US (15 h 30 – 22 h à Paris) : la surface n'est calculable qu'en séance, sinon la dernière surface connue est affichée « PÉRIMÉ » |
-| Obligataire, change | U.S. Treasury, BCE, FRED (OCDE, ICE BofA), BRI | Pas de cotations d'obligations individuelles ni de volatilité implicite des devises |
+| Obligataire | U.S. Treasury, BCE, FRED (OCDE, ICE BofA), BRI | Pas de cotations d'obligations individuelles |
+| Forex | Yahoo (cours), BRI (taux directeurs de 19 banques centrales), CFTC (rapports TFF et legacy), ForexFactory (agenda) | Pas de volatilité implicite (gré à gré) : volatilité réalisée ; COT limité aux contrats à terme, hebdomadaire ; portage calculé sur les taux directeurs |
 | Analyse fondamentale | Yahoo (états publiés) | Consensus et actionnariat sous licence, non affichés |
 | Portefeuille et risque | Yahoo (cours ajustés), calculs du terminal | Données saisies gardées dans le navigateur |
 | Calendrier | Export hebdo ForexFactory | Semaine en cours ; pas de chiffre réel (déduit du « précédent » de la publication suivante) ; l'historique se constitue localement |

@@ -17,7 +17,7 @@ export const NAV: NavGroup[] = [
   ] },
   { title: "Taux et change", color: "#c77dff", items: [
     { code: "YAS", href: "/fi", label: "Obligataire", icon: "percent", desc: "Courbes des taux, souverains, crédit, calculateur d'obligation", example: "YAS" },
-    { code: "FX", href: "/fx", label: "Forex", icon: "fx", desc: "Paires, volatilités, change à terme, swaps, options de change", example: "EURUSD Curncy FWCV" },
+    { code: "FX", href: "/fx", label: "Forex", icon: "fx", desc: "Paires, force des devises, taux directeurs, COT, corrélations, analyse de paire, terme et options", example: "EURUSD Curncy FX" },
     { code: "MAC", href: "/macro", label: "Macro", icon: "pulse", desc: "Courbes du Trésor, taux directeurs, indicateurs US", example: "MAC" },
   ] },
   { title: "Matières premières", color: "#e6e600", items: [
