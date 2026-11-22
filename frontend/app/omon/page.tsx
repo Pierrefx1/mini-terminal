@@ -67,7 +67,7 @@ export default function OMON() {
             </tr>;
           })}</tbody>
         </table>}
-        <div className="px-2 py-1 text-[10px] text-dim">Fond coloré : dans la monnaie. VI et grecques fournies par la source (Tradier : modèle ORATS, mises à jour toutes les heures). Clic sur une ligne : valorisation dans OVME au marché (smile de la surface VOL, écart du prix coté vs surface). Options cotées aux États-Unis uniquement.</div>
+        <div className="px-2 py-1 text-[10px] text-dim">Fond coloré : dans la monnaie. Chaîne Yahoo Finance (différé) ; VI recalculée sur le milieu bid/ask et grecques Black-Scholes calculées par le terminal (taux 4 %, sans dividende). Clic sur une ligne : valorisation dans OVME au marché (smile de la surface VOL, écart du prix coté vs surface). Options cotées aux États-Unis uniquement.</div>
       </Panel>
       <Panel className="col-span-12 md:col-span-6 xl:col-span-4" title="Surface de volatilité implicite" right={<SourceTag env={surf.env} />}>
         <State loading={surf.loading && !surf.data} error={surf.error} />

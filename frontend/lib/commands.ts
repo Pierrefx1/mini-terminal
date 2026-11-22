@@ -48,7 +48,7 @@ export const FUNCTIONS: Fn[] = [
   { code: "COT", label: "Positionnement CFTC d'une matière première ou d'une devise", security: "optional", route: (s) => (s?.yellow === "Curncy" ? `/fx?tab=cot&s=${encodeURIComponent(s.symbol)}` : `/cmdty?tab=cot&k=${(s && CMDTY_KEYS[s.symbol]) || "WTI"}`), example: "GOLD COT · EURUSD Curncy COT" },
   { code: "EIA", label: "Stocks de pétrole et de gaz (EIA)", security: "none", route: () => "/cmdty?tab=eia", example: "EIA" },
   { code: "DESK", label: "Desk énergie et métaux", security: "none", route: () => "/cmdty?tab=desk", example: "DESK" },
-  { code: "OMON", label: "Moniteur d'options (chaîne Tradier, grecques, surface de volatilité)", security: "required", route: (s) => `/omon${q(s)}`, example: "AAPL US Equity OMON" },
+  { code: "OMON", label: "Moniteur d'options (chaîne, grecques, surface de volatilité)", security: "required", route: (s) => `/omon${q(s)}`, example: "AAPL US Equity OMON" },
   { code: "OVME", label: "Valorisation d'options et stratégies", security: "optional", route: (s) => `/ovme${q(s)}`, example: "OVME" },
   { code: "VOL", label: "Surface de volatilité implicite 3D, structure par terme, smile, skew (yfinance, Black-76)", security: "optional", route: (s) => `/vol${q(s)}`, example: "VOL QQQ" },
   { code: "ECST", label: "Economics : banques centrales, impact des publications", security: "none", route: () => "/econ", example: "ECST" },

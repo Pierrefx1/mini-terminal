@@ -62,7 +62,7 @@ Clavier : `⌘K` ou `/` pour la barre de commandes (taper une lettre n'importe o
 |---|---|---|
 | WEI, DES, graphique, bandeau, watchlist | Yahoo Finance | Cours différés (DELAYED), API non officielle ; MSCI World approché par l'ETF URTH |
 | Matières premières | Yahoo (contrats par échéance), EIA, CFTC | Électricité, charbon, métaux LME : sous licence, non couverts |
-| Options (OMON) | Tradier (chaînes, grecques et VI ORATS ; clé gratuite `TRADIER_API_KEY`) | Options américaines uniquement ; sandbox différé de 15 min ; grecques mises à jour toutes les heures ; 18 échéances chargées par sous-jacent (quota d'appels). Sans clé : CBOE, qui refuse désormais les appels automatisés |
+| Options (OMON) | Yahoo Finance via yfinance (chaînes différées, sans clé) ; VI recalculée sur le milieu bid/ask et grecques Black-Scholes calculées par le terminal | Options américaines uniquement ; 14 échéances par sous-jacent (limite de requêtes Yahoo) ; sans dividende dans les grecques ; CBOE refuse désormais les appels automatisés |
 | Surface de volatilité (VOL) | Yahoo Finance via yfinance | Différé ; Yahoo ne publie pas de bid/ask hors séance US (15 h 30 – 22 h à Paris) : la surface n'est calculable qu'en séance, sinon la dernière surface connue est affichée « PÉRIMÉ » |
 | Obligataire | U.S. Treasury, BCE, FRED (OCDE, ICE BofA), BRI | Pas de cotations d'obligations individuelles |
 | Forex | Yahoo (cours), BRI (taux directeurs de 19 banques centrales), CFTC (rapports TFF et legacy), ForexFactory (agenda) | Pas de volatilité implicite (gré à gré) : volatilité réalisée ; COT limité aux contrats à terme, hebdomadaire ; portage calculé sur les taux directeurs |

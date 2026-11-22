@@ -62,4 +62,4 @@ def sources():
 
 @app.get("/api/status")
 def status():
-    return {"keys": {"fred": bool(config.FRED_API_KEY), "finnhub": bool(config.FINNHUB_API_KEY), "gemini": bool(config.GEMINI_API_KEY), "eia": bool(config.EIA_API_KEY), "tradier": bool(config.TRADIER_API_KEY)}}
+    return {"keys": {"fred": bool(config.FRED_API_KEY), "finnhub": bool(config.FINNHUB_API_KEY), "gemini": bool(config.GEMINI_API_KEY), "eia": bool(config.EIA_API_KEY)}}

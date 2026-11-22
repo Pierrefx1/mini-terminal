@@ -23,7 +23,7 @@ Ce document décrit l'architecture actuelle, les choix qui la justifient et la f
  └───────────────┬─────────────────────────────────────────────┘
                  │ SQLite (data/terminal.db) : cache, news, calendrier, watchlist
                  ▼
-   Yahoo Finance · CBOE · EIA · CFTC · U.S. Treasury · BRI · FRED · BCE · Eurostat · OCDE
+   Yahoo Finance · EIA · CFTC · U.S. Treasury · BRI · FRED · BCE · Eurostat · OCDE
    · Banque mondiale · ForexFactory · CoinGecko · flux RSS · Google Gemini
 ```
 
@@ -62,7 +62,7 @@ mini-terminal/
 │   │   ├── cache.py            cache + enveloppe source/statut/heure
 │   │   ├── analytics.py        calculs purs (variations, volatilité, 52 semaines, largeur)
 │   │   ├── risk.py             VaR, ES, Monte Carlo, ratios, bêtas factoriels, contributions
-│   │   ├── providers/          yahoo, cboe, eia, cftc, treasury, bis, fred, ecb, eurostat, oecd,
+│   │   ├── providers/          yahoo, yahoo_options, eia, cftc, treasury, bis, fred, ecb, eurostat, oecd,
 │   │   │                       worldbank, forexfactory, coingecko, rss, universe, base, registry, http
 │   │   └── routers/            overview (WEI, DES), commodities, rates_fx (YAS, FX), analysis
 │   │                           (FA, options, economics), portfolio (PORT, RISK), collab (messagerie,
@@ -107,7 +107,7 @@ Critères : données disponibles, fréquence, limites, licence. Les limites des 
 | CoinGecko | 250 premiers crypto-actifs | Quelques minutes | Quota gratuit limité | Mention requise | DELAYED |
 | Flux RSS (CNBC, MarketWatch, BBC, Fed, BCE…) | Actualités | Toutes les 5 minutes | — | Titres et liens vers l'éditeur uniquement | — |
 
-| CBOE | Chaînes d'options américaines (bid, ask, VI, grecques, intérêt ouvert), bid/ask des actions et ETF | Différé, sans clé | Usage personnel | DELAYED |
+| Yahoo Finance (options) | Chaînes d'options américaines (bid, ask, dernier cours, volume, intérêt ouvert) ; VI recalculée et grecques Black-Scholes par le terminal | Différé, sans clé | Usage personnel | DELAYED |
 | Yahoo Finance (contrats par échéance, états financiers) | Courbes à terme ; comptes annuels et trimestriels, multiples publiés | Sans clé | Usage personnel | DELAYED / HISTORICAL |
 | EIA | Stocks de brut, Cushing, SPR, essence, distillats, production, raffinage, gaz | Hebdomadaire ; clé gratuite `EIA_API_KEY` (la clé de démonstration publique est vite épuisée) | Domaine public | HISTORICAL |
 | CFTC COT | Positionnement des spéculateurs et des commerciaux | Hebdomadaire, sans clé | Domaine public | HISTORICAL |

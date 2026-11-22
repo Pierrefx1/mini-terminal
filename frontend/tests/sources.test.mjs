@@ -17,8 +17,8 @@ test("panne durable : plusieurs échecs d'affilée, le dernier récent", () => {
 });
 
 test("modules touchés : sources majeures et secondaires", () => {
-  assert.match(impact("CBOE (différé)").modules, /OMON/);
-  assert.equal(impact("CBOE (différé)").minor, false);
+  assert.match(impact("Yahoo Finance via yfinance (options)").modules, /OMON/);
+  assert.equal(impact("Yahoo Finance via yfinance (options)").minor, false);
   assert.equal(impact("Yahoo Finance (différé)").minor, false);
   assert.equal(impact("Yahoo Finance (RSS)").minor, true);
   assert.equal(impact("Al Jazeera").minor, true);
