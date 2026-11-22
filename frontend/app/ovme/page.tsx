@@ -186,6 +186,20 @@ export default function OVME() {
         <table><thead><tr><th>Cours \ vol.</th>{[-10, -5, 0, 5, 10].map((dv) => <th key={dv} className="num">{num(sig * 100 + dv, 0)} %</th>)}</tr></thead>
           <tbody>{grid.map((g) => <tr key={g.dS} className={g.dS === 0 ? "bg-raised" : ""}><td>{pct(g.dS, 0)} ({num(Se * (1 + g.dS / 100), 1)})</td>{g.v.map((v, i) => <td key={i} className={`num ${i === 2 && g.dS === 0 ? "text-amber" : ""}`}>{num(v, 2)}</td>)}</tr>)}</tbody></table>
       </Panel>
+      <Panel className="col-span-12 lg:col-span-6" title="Scénarios : P&L selon le cours et la volatilité"
+        right={<Seg value={horizon} options={[["now", "Immédiat"], ["1w", "+1 semaine"], ["1m", "+1 mois"]]} onChange={setHorizon} />}>
+        <div className="h-72"><EChart option={heat} /></div>
+        <div className="px-2 pb-1 text-[10px] text-dim">
+          P&amp;L de la stratégie face à sa prime d&apos;entrée, pour un choc instantané du cours et un décalage parallèle de la vol de toutes les jambes (sticky-strike).
+          {horizon !== "now" && ` Temps écoulé déduit de la maturité (reste ${Math.round(tauH * 365)} j).`}
+        </div>
+      </Panel>
+      <Panel className="col-span-12 h-[380px] lg:col-span-6" title="P&L 3D : cours × temps restant" right={<span title="Glisser : rotation · molette : zoom · double-clic : vue initiale">3D interactive</span>}>
+        <div className="flex h-full flex-col">
+          <div className="min-h-0 flex-1"><Plot data={surf3d.data} layout={surf3d.layout} /></div>
+          <div className="shrink-0 px-2 pb-1 text-[10px] text-dim">Valeur de la stratégie moins sa prime, du jour de l&apos;entrée (arrière) à l&apos;échéance (avant) ; lignes de niveau projetées au sol. Vols et taux constants.</div>
+        </div>
+      </Panel>
       <Panel className="col-span-12" title="Stratégies : diagramme de gains et pertes" right={<select value={strat} onChange={(e) => setStrat(e.target.value)}>{Object.keys(STRATS).map((k) => <option key={k}>{k}</option>)}</select>}>
         <div className="grid grid-cols-12">
           <div className="col-span-12 lg:col-span-5">
@@ -212,20 +226,6 @@ export default function OVME() {
         <div className="px-2 pb-1 text-[10px] text-dim">
           {m ? "Chaque jambe est valorisée à la vol de marché de son strike (smile de la surface VOL), au spot et au dividende implicite de marché."
             : "Primes calculées avec les paramètres ci-dessus (même volatilité pour toutes les jambes). Mode Marché : chaque jambe prend la vol de son strike."}
-        </div>
-      </Panel>
-      <Panel className="col-span-12 lg:col-span-6" title="Scénarios : P&L selon le cours et la volatilité"
-        right={<Seg value={horizon} options={[["now", "Immédiat"], ["1w", "+1 semaine"], ["1m", "+1 mois"]]} onChange={setHorizon} />}>
-        <div className="h-72"><EChart option={heat} /></div>
-        <div className="px-2 pb-1 text-[10px] text-dim">
-          P&amp;L de la stratégie face à sa prime d&apos;entrée, pour un choc instantané du cours et un décalage parallèle de la vol de toutes les jambes (sticky-strike).
-          {horizon !== "now" && ` Temps écoulé déduit de la maturité (reste ${Math.round(tauH * 365)} j).`}
-        </div>
-      </Panel>
-      <Panel className="col-span-12 h-[380px] lg:col-span-6" title="P&L 3D : cours × temps restant" right={<span title="Glisser : rotation · molette : zoom · double-clic : vue initiale">3D interactive</span>}>
-        <div className="flex h-full flex-col">
-          <div className="min-h-0 flex-1"><Plot data={surf3d.data} layout={surf3d.layout} /></div>
-          <div className="shrink-0 px-2 pb-1 text-[10px] text-dim">Valeur de la stratégie moins sa prime, du jour de l&apos;entrée (arrière) à l&apos;échéance (avant) ; lignes de niveau projetées au sol. Vols et taux constants.</div>
         </div>
       </Panel>
     </div>
