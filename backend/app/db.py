@@ -53,3 +53,6 @@ def init():
         cols = {r["name"] for r in c.execute("PRAGMA table_info(news)")}
         if "image" not in cols:
             c.execute("ALTER TABLE news ADD COLUMN image TEXT NOT NULL DEFAULT ''")
+        cols = {r["name"] for r in c.execute("PRAGMA table_info(calendar_events)")}
+        if "actual" not in cols:  # chiffre publié, rapproché depuis Nasdaq (ForexFactory ne le donne pas)
+            c.execute("ALTER TABLE calendar_events ADD COLUMN actual TEXT NOT NULL DEFAULT ''")
