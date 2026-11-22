@@ -17,6 +17,8 @@ export type Marker = {
   id: string; cat: Cat; kind: string; title: string; critical: boolean; iso: string | null; country: string | null; place: string | null;
   lat: number; lon: number; time?: string | number | null; source?: string; summary?: string; link?: string; symbol?: string; index?: string;
   price?: number | null; change_pct?: number | null; impact?: string; forecast?: string; previous?: string;
+  actual?: string; surprise?: number | null;            // calendrier : chiffre publié et écart au consensus
+  articles?: number; reports?: number; tone?: number;    // GDELT : articles, relevés, tonalité moyenne
 };
 export type Arc = { cat: ArcCat; label: string; weight: number; corr?: number; n?: number; from: { lat: number; lon: number; name?: string }; to: { lat: number; lon: number; name?: string } };
 export type Feature = { type: "Feature"; properties: { ADM0_A3: string; ADMIN: string; NAME: string; CONTINENT: string }; geometry: any };
@@ -80,7 +82,9 @@ function spread(markers: Marker[]): (Marker & { plat: number; plon: number })[] 
 
 type Props = {
   width: number; height: number; features: Feature[]; markers: Marker[]; arcs: Arc[];
-  selectedIso: string | null; selectedId: string | null; riskByIso: Record<string, number>; rotate: boolean;
+  selectedIso: string | null; selectedId: string | null; rotate: boolean;
+  /** intensité de l'aplat rouge par pays (0 à 4) et texte de son info-bulle */
+  riskByIso: Record<string, number>; riskTip?: Record<string, string>;
   onMarker: (m: Marker) => void; onCountry: (iso: string, name: string) => void; onHover?: (text: string | null) => void;
   /** poignée de commande (centrer, zoomer) : objet ref passé en propriété, compatible avec next/dynamic */
   api: React.RefObject<GlobeHandle | null>;
@@ -148,7 +152,9 @@ export default function WorldGlobe(p: Props) {
   }, []);
 
   const pts = useMemo(() => spread(p.markers), [p.markers]);
-  const rings = useMemo(() => pts.filter((m) => (m.cat === "risk" && m.critical) || m.id === p.selectedId), [pts, p.selectedId]);
+  // impulsions : les 12 risques critiques les plus repris (au-delà, le globe devient illisible) et le marqueur sélectionné
+  const rings = useMemo(() => [...pts.filter((m) => m.cat === "risk" && m.critical).sort((a, b) => (b.articles ?? 0) - (a.articles ?? 0)).slice(0, 12),
+    ...pts.filter((m) => m.id === p.selectedId)], [pts, p.selectedId]);
   const labels = useMemo(() => pts.filter((m) => m.cat === "center"), [pts]);
   const polygons = useMemo(() => p.features.filter((f) => f.properties.ADM0_A3 !== "ATA"), [p.features]);
 
@@ -185,8 +191,8 @@ export default function WorldGlobe(p: Props) {
       polygonAltitude={(f: any) => (f.properties.ADM0_A3 === p.selectedIso ? 0.012 : 0.004)}
       polygonsTransitionDuration={250}
       polygonLabel={(f: any) => {
-        const r = p.riskByIso[f.properties.ADM0_A3];
-        return `<div style="${TIP}"><b>${esc(f.properties.ADMIN)}</b>${r ? `<br/><span style="color:#ff4d4d">${r} risque${r > 1 ? "s" : ""} signalé${r > 1 ? "s" : ""}</span>` : ""}<br/><span style="color:#7486a0">clic : fiche pays</span></div>`;
+        const t = p.riskTip?.[f.properties.ADM0_A3];
+        return `<div style="${TIP}"><b>${esc(f.properties.ADMIN)}</b>${t ? `<br/><span style="color:#ff4d4d">${esc(t)}</span>` : ""}<br/><span style="color:#7486a0">clic : fiche pays</span></div>`;
       }}
       onPolygonHover={(f: any) => { setHoverIso(f ? f.properties.ADM0_A3 : null); p.onHover?.(f ? f.properties.ADMIN : null); }}
       onPolygonClick={(f: any) => p.onCountry(f.properties.ADM0_A3, f.properties.ADMIN)}
@@ -196,7 +202,7 @@ export default function WorldGlobe(p: Props) {
       pointLng="plon"
       pointColor={(m: any) => CAT_COLOR[m.cat as Cat]}
       pointAltitude={(m: any) => (m.id === p.selectedId ? 0.06 : m.cat === "center" ? 0.012 : m.critical ? 0.035 : 0.018)}
-      pointRadius={(m: any) => (m.cat === "center" ? 0.32 : m.critical ? 0.3 : 0.22)}
+      pointRadius={(m: any) => (m.cat === "center" ? 0.32 : m.kind === "gdelt" ? 0.14 + Math.min(Math.log10(m.articles || 1) * 0.07, 0.2) : m.critical ? 0.3 : 0.22)}
       pointResolution={8}
       pointsMerge={false}
       pointsTransitionDuration={300}

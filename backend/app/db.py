@@ -25,6 +25,18 @@ CREATE TABLE IF NOT EXISTS vol_history (
   ticker TEXT NOT NULL, date TEXT NOT NULL, spot REAL, atm30 REAL, skew30 REAL, fly30 REAL, atm90 REAL, skew90 REAL,
   n_points INTEGER, updated_at TEXT NOT NULL, PRIMARY KEY (ticker, date)
 );
+-- GDELT : quarts d'heure traités (n = -1 : fichier jamais publié), agrégats par pays, événements marquants
+CREATE TABLE IF NOT EXISTS gdelt_slots (slot TEXT PRIMARY KEY, n INTEGER NOT NULL, fetched_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS gdelt_country (
+  slot TEXT NOT NULL, iso TEXT NOT NULL, events INTEGER NOT NULL, conflict INTEGER NOT NULL, material INTEGER NOT NULL,
+  articles INTEGER NOT NULL, tone_sum REAL NOT NULL, PRIMARY KEY (slot, iso)
+);
+CREATE TABLE IF NOT EXISTS gdelt_events (
+  id TEXT PRIMARY KEY, slot TEXT NOT NULL, iso TEXT NOT NULL, root TEXT NOT NULL, quad INTEGER NOT NULL, goldstein REAL NOT NULL,
+  articles INTEGER NOT NULL, tone REAL NOT NULL, place TEXT NOT NULL, precise INTEGER NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL,
+  actor1 TEXT NOT NULL, actor2 TEXT NOT NULL, url TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS gdelt_events_slot ON gdelt_events(slot);
 -- État de chaque source de données : dernier succès, dernière erreur, compteurs (alimenté par cache.cached)
 CREATE TABLE IF NOT EXISTS source_health (
   source TEXT PRIMARY KEY, last_ok TEXT, last_error_at TEXT, last_error TEXT,

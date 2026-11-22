@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 import re
+from datetime import datetime
 from dataclasses import dataclass
 
 import numpy as np
@@ -259,6 +260,104 @@ CURRENCY_PLACE = {
     "JPY": ("JPN", "Tokyo", 35.68, 139.69), "CAD": ("CAN", "Ottawa", 45.42, -75.70), "AUD": ("AUS", "Sydney", -33.87, 151.21),
     "NZD": ("NZL", "Wellington", -41.29, 174.78), "CNY": ("CHN", "Pékin", 39.90, 116.40), "CHF": ("CHE", "Zurich", 47.37, 8.54),
 }
+
+# Noms français des pays absents de COUNTRIES (non géolocalisés dans les titres, mais présents dans GDELT)
+OTHER_NAMES = {
+    "BHR": "Bahreïn", "MLT": "Malte", "CYP": "Chypre", "LTU": "Lituanie", "LVA": "Lettonie", "EST": "Estonie", "TTO": "Trinité-et-Tobago",
+    "HKG": "Hong Kong", "MAC": "Macao", "BIH": "Bosnie-Herzégovine", "ALB": "Albanie", "MKD": "Macédoine du Nord", "MNE": "Monténégro",
+    "KOS": "Kosovo", "SVK": "Slovaquie", "SVN": "Slovénie", "HRV": "Croatie", "BGR": "Bulgarie", "CZE": "Tchéquie", "ISL": "Islande",
+    "LUX": "Luxembourg", "MDA": "Moldavie", "JAM": "Jamaïque", "DOM": "République dominicaine", "GTM": "Guatemala", "HND": "Honduras",
+    "SLV": "Salvador", "NIC": "Nicaragua", "CRI": "Costa Rica", "PAN": "Panama", "PRY": "Paraguay", "URY": "Uruguay", "GUY": "Guyana",
+    "SUR": "Suriname", "BLZ": "Belize", "BHS": "Bahamas", "PRI": "Porto Rico", "LAO": "Laos", "BRN": "Brunei", "TLS": "Timor oriental",
+    "PNG": "Papouasie-Nouvelle-Guinée", "FJI": "Fidji", "KGZ": "Kirghizistan", "TJK": "Tadjikistan", "TKM": "Turkménistan",
+    "UZB": "Ouzbékistan", "UGA": "Ouganda", "TZA": "Tanzanie", "ZMB": "Zambie", "ZWE": "Zimbabwe", "MWI": "Malawi", "BWA": "Botswana",
+    "NAM": "Namibie", "LSO": "Lesotho", "SWZ": "Eswatini", "CMR": "Cameroun", "GAB": "Gabon", "COG": "Congo", "CAF": "Centrafrique",
+    "BEN": "Bénin", "TGO": "Togo", "GIN": "Guinée", "SLE": "Sierra Leone", "LBR": "Liberia", "GMB": "Gambie", "GNB": "Guinée-Bissau",
+    "MRT": "Mauritanie", "ERI": "Érythrée", "DJI": "Djibouti", "BDI": "Burundi", "SAH": "Sahara occidental", "MUS": "Maurice",
+    "MDV": "Maldives", "BTN": "Bhoutan", "GNQ": "Guinée équatoriale", "SGP": "Singapour", "NCL": "Nouvelle-Calédonie", "FLK": "Malouines",
+    "SYC": "Seychelles", "CPV": "Cap-Vert", "COM": "Comores", "SSD": "Soudan du Sud",
+}
+
+
+# ───────────────────────────── Points chauds et actifs exposés ─────────────────────────────
+
+@dataclass(frozen=True)
+class Zone:
+    key: str
+    name: str
+    isos: tuple[str, ...]          # pays (ADM0_A3) dont les événements alimentent la zone
+    lat: float
+    lon: float
+    alt: float                     # altitude de caméra pour cadrer la zone
+    assets: tuple[tuple[str, str, str], ...]  # (symbole Yahoo, libellé, canal d'exposition)
+
+
+# Zones géopolitiques suivies et actifs qui réagissent le plus directement à leur actualité.
+# Choix éditorial (canaux de transmission connus), pas une estimation statistique.
+ZONES = [
+    Zone("gulf", "Moyen-Orient et Golfe", ("IRN", "ISR", "PSX", "LBN", "SYR", "IRQ", "YEM", "SAU", "ARE", "QAT", "KWT", "OMN", "JOR"), 29.0, 45.0, 1.1,
+         (("BZ=F", "Brent", "Offre de brut, détroit d'Ormuz"), ("GC=F", "Or", "Valeur refuge"), ("ILS=X", "USD/ILS", "Prime de risque israélienne"),
+          ("TA35.TA", "TA-35", "Actions israéliennes"), ("XLE", "Énergie US (XLE)", "Pétrolières"), ("ITA", "Défense US (ITA)", "Dépenses militaires"))),
+    Zone("ukr", "Russie – Ukraine", ("RUS", "UKR", "BLR", "MDA"), 50.0, 35.0, 1.15,
+         (("TTF=F", "Gaz européen (TTF)", "Approvisionnement gazier de l'Europe"), ("ZW=F", "Blé", "Exportations de la mer Noire"),
+          ("ZC=F", "Maïs", "Exportations ukrainiennes"), ("RHM.DE", "Rheinmetall", "Réarmement européen"), ("^STOXX50E", "Euro Stoxx 50", "Exposition de l'Europe"),
+          ("RUB=X", "USD/RUB", "Rouble"))),
+    Zone("taiwan", "Taïwan et mer de Chine", ("TWN", "CHN", "PHL"), 23.5, 121.0, 1.05,
+         (("TSM", "TSMC", "Premier fondeur mondial de puces"), ("^SOX", "Semi-conducteurs (SOX)", "Chaîne d'approvisionnement"),
+          ("^TWII", "TAIEX", "Actions taïwanaises"), ("TWD=X", "USD/TWD", "Dollar taïwanais"), ("CNH=X", "USD/CNH", "Yuan offshore"), ("^HSI", "Hang Seng", "Actions chinoises"))),
+    Zone("redsea", "Mer Rouge et Corne de l'Afrique", ("YEM", "EGY", "SDN", "ERI", "DJI", "SOM", "ETH"), 16.0, 41.0, 1.15,
+         (("MAERSK-B.CO", "Maersk", "Détournements par le cap de Bonne-Espérance"), ("ZIM", "ZIM", "Taux de fret conteneurs"),
+          ("BZ=F", "Brent", "Transit pétrolier par Suez"), ("EGP=X", "USD/EGP", "Recettes du canal de Suez"))),
+    Zone("korea", "Péninsule coréenne", ("PRK", "KOR"), 38.0, 127.5, 1.0,
+         (("^KS11", "KOSPI", "Actions sud-coréennes"), ("005930.KS", "Samsung", "Mémoire et électronique"), ("KRW=X", "USD/KRW", "Won"))),
+    Zone("southasia", "Inde – Pakistan", ("IND", "PAK", "AFG"), 29.0, 72.0, 1.15,
+         (("^NSEI", "Nifty 50", "Actions indiennes"), ("INR=X", "USD/INR", "Roupie"), ("GC=F", "Or", "Valeur refuge"))),
+    Zone("latam", "Venezuela et Caraïbes", ("VEN", "COL", "CUB", "HTI"), 9.0, -70.0, 1.2,
+         (("CL=F", "WTI", "Brut lourd vénézuélien"), ("CVX", "Chevron", "Seul grand producteur américain sur place"))),
+    Zone("sahel", "Sahel et golfe de Guinée", ("MLI", "BFA", "NER", "TCD", "NGA", "CMR"), 13.0, 5.0, 1.3,
+         (("GC=F", "Or", "Mines d'or sahéliennes"), ("BZ=F", "Brent", "Production nigériane"))),
+]
+ZONE_SYMBOLS = list(dict.fromkeys(sym for z in ZONES for sym, _, _ in z.assets))
+
+
+# ───────────────────────────── Regroupement des articles sur un même sujet ─────────────────────────────
+
+_STOP = set("a an the of in on at to for and or with by from as is are was were be been after over amid says said new us u s "
+            "le la les un une des du de d l et en au aux pour par sur dans avec selon après est sont a été".split())
+
+
+def _words(title: str) -> set[str]:
+    return {w for w in re.findall(r"[a-zà-ÿ0-9]+", title.lower()) if len(w) > 2 and w not in _STOP}
+
+
+def cluster(items: list[dict], threshold: float = 0.45, window_h: float = 36) -> list[dict]:
+    """Regroupe les articles qui racontent le même événement (titres proches, publiés à moins de `window_h` heures).
+
+    `items` triés du plus récent au plus ancien, chacun avec title, source, published (ISO). Renvoie un article
+    représentatif par sujet (le plus récent) enrichi de `sources` (nombre de médias) et `others` (autres titres / médias).
+    """
+    groups: list[dict] = []
+    for it in items:
+        w, t = _words(it["title"]), datetime.fromisoformat(it["published"])
+        for g in groups:
+            if abs((g["_t"] - t).total_seconds()) > window_h * 3600 or not w:
+                continue
+            inter = len(w & g["_w"])
+            if inter >= 3 and inter / min(len(w), len(g["_w"])) >= threshold:
+                g["_w"] |= w
+                if it["source"] not in g["_src"]:
+                    g["_src"].add(it["source"])
+                    g["others"].append({"source": it["source"], "title": it["title"], "link": it["link"]})
+                break
+        else:
+            groups.append({**it, "_w": set(w), "_t": t, "_src": {it["source"]}, "others": []})
+    out = []
+    for g in groups:
+        g["sources"] = len(g.pop("_src"))
+        g.pop("_w"); g.pop("_t")
+        out.append(g)
+    return out
+
 
 # ───────────────────────────── Liens ─────────────────────────────
 

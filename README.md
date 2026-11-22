@@ -48,7 +48,7 @@ Syntaxe : `<instrument> <FONCTION>` ou `<FONCTION> [instrument]`, puis Entrée. 
 | `AAPL US Equity FA`, `MC FP Equity DCF` | Analyse fondamentale, valorisation |
 | `SPX OMON`, `OVME` | Chaîne d'options du S&P 500, pricer d'options |
 | `VOL`, `VOL QQQ` | Surface de volatilité implicite 3D, structure par terme ATM, smile, skew et butterfly 90/110 (SPY par défaut) ; IV 30 j vs vol réalisée 20/60 j, historique quotidien des métriques 30 j |
-| `WM` | World Monitor : globe 3D des risques géopolitiques (rouge), informations économiques (bleu), événements majeurs (orange) et places financières (blanc), avec liens entre places (corrélation 60 séances), corridors énergétiques et commerciaux, fil international |
+| `WM` | World Monitor : points chauds et actifs exposés (Brent, gaz, blé, TSMC…), conflits recensés par GDELT par pays et écart à la normale sur 7 jours, globe 3D des risques géopolitiques (rouge), informations économiques (bleu), événements majeurs (orange) et places financières (blanc), publications avec résultat et surprise, liens entre places (corrélation 60 séances), corridors énergétiques et commerciaux, fil international regroupé par sujet |
 | `SRC` | État des sources de données : dernier succès, dernière erreur, taux d'échec, latence |
 | `YAS`, `EURUSD Curncy FWCV` | Obligataire, change à terme |
 | `PORT`, `RISK` | Portefeuilles, risque |
@@ -68,7 +68,8 @@ Clavier : `⌘K` ou `/` pour la barre de commandes (taper une lettre n'importe o
 | Forex | Yahoo (cours), BRI (taux directeurs de 19 banques centrales), CFTC (rapports TFF et legacy), ForexFactory (agenda) | Pas de volatilité implicite (gré à gré) : volatilité réalisée ; COT limité aux contrats à terme, hebdomadaire ; portage calculé sur les taux directeurs |
 | Analyse fondamentale | Yahoo (états publiés) | Consensus et actionnariat sous licence, non affichés |
 | Portefeuille et risque | Yahoo (cours ajustés), calculs du terminal | Données saisies gardées dans le navigateur |
-| Calendrier | Export hebdo ForexFactory | Semaine en cours ; pas de chiffre réel (déduit du « précédent » de la publication suivante) ; l'historique se constitue localement |
+| Risque géopolitique (WM) | GDELT 2.0 (événements géolocalisés extraits des médias mondiaux, toutes les 15 min), flux RSS internationaux | Extraction automatique (doublons, erreurs de lieu) ; 8 jours conservés localement (~20 s de rattrapage au premier lancement) ; écart à la normale = part du pays dans les conflits recensés vs ses 7 jours précédents ; actifs exposés : choix éditorial |
+| Calendrier | Export hebdo ForexFactory (agenda, consensus, précédent), calendrier économique de Nasdaq (chiffres publiés) | Semaine en cours ; chiffre réel rapproché depuis Nasdaq sur les deux dernières semaines (sinon déduit du « précédent » de la publication suivante) ; l'historique se constitue localement |
 | News | 13 flux RSS (CNBC, MarketWatch, Fed, BCE, BoE, BEA, BBC, Guardian, Le Monde, Le Figaro, France 24) + Yahoo par symbole | 45 jours conservés |
 | Screener, actions | Wikipedia (composition, secteurs), SPDR (poids S&P 500), Yahoo (cours) | Pas de capitalisation ni de PER ; rendement et volume recalculés une fois par jour |
 | Screener, onglet Crypto | CoinGecko (250 premières cryptos, marché global), alternative.me (peur et avidité) | Quota gratuit limité : rafraîchi toutes les 3 minutes |
