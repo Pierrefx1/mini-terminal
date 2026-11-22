@@ -38,10 +38,11 @@ def record_health(source: str, ok: bool, error: str | None = None, seconds: floa
         with db.conn() as c:
             c.execute("INSERT OR IGNORE INTO source_health (source) VALUES (?)", (source,))
             if ok:
-                c.execute("UPDATE source_health SET last_ok=?, ok_count=ok_count+1, last_ms=? WHERE source=?", (ts, ms, source))
-            else:
-                c.execute("UPDATE source_health SET last_error_at=?, last_error=?, err_count=err_count+1, last_ms=? WHERE source=?",
-                          (ts, (error or "")[:500], ms, source))
+                c.execute("UPDATE source_health SET last_ok=?, ok_count=ok_count+1, last_ms=?, streak=0, down_since=NULL WHERE source=?", (ts, ms, source))
+            else:  # streak : échecs consécutifs ; down_since : premier échec de la série
+                c.execute("UPDATE source_health SET last_error_at=?, last_error=?, err_count=err_count+1, last_ms=?, streak=streak+1, "
+                          "down_since=CASE WHEN streak=0 THEN ? ELSE down_since END WHERE source=?",
+                          (ts, (error or "")[:500], ms, ts, source))
     except Exception:
         pass
 

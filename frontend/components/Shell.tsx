@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import AlertWatcher from "@/components/AlertWatcher";
+import SourceAlert from "@/components/SourceAlert";
 import CommandBar from "@/components/CommandBar";
 import Icon from "@/components/Icon";
 import { StatusBadge } from "@/components/ui";
@@ -185,6 +186,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
               {cur.item.example && <span className="ml-auto hidden shrink-0 text-[10px] text-dim lg:inline">commande : <span className="text-info">{cur.item.example}</span></span>}
             </div>
           )}
+          <SourceAlert />
           <main className="min-h-0 flex-1 overflow-hidden p-1">{children}</main>
         </div>
       </div>

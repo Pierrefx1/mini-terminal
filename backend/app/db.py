@@ -65,6 +65,13 @@ def init():
         cols = {r["name"] for r in c.execute("PRAGMA table_info(news)")}
         if "image" not in cols:
             c.execute("ALTER TABLE news ADD COLUMN image TEXT NOT NULL DEFAULT ''")
+        cols = {r["name"] for r in c.execute("PRAGMA table_info(source_health)")}
+        if "streak" not in cols:  # échecs consécutifs et début de la panne en cours (bandeau d'alerte)
+            c.execute("ALTER TABLE source_health ADD COLUMN streak INTEGER NOT NULL DEFAULT 0")
+            c.execute("ALTER TABLE source_health ADD COLUMN down_since TEXT")
+            # bases existantes : une source jamais en succès a échoué à chaque appel ; sinon au moins le dernier
+            c.execute("UPDATE source_health SET streak = CASE WHEN last_ok IS NULL THEN err_count ELSE 1 END "
+                      "WHERE last_error_at IS NOT NULL AND (last_ok IS NULL OR last_error_at > last_ok)")
         cols = {r["name"] for r in c.execute("PRAGMA table_info(calendar_events)")}
         if "actual" not in cols:  # chiffre publié, rapproché depuis Nasdaq (ForexFactory ne le donne pas)
             c.execute("ALTER TABLE calendar_events ADD COLUMN actual TEXT NOT NULL DEFAULT ''")
