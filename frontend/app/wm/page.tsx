@@ -300,7 +300,7 @@ export default function WorldMonitor() {
         </aside>
 
         {/* Globe */}
-        <main className="relative min-h-[420px] overflow-hidden" style={{ background: "radial-gradient(ellipse at 50% 45%, #0b1119 0%, #030508 55%, #010203 100%)" }}>
+        <section className="relative min-h-[420px] overflow-hidden" style={{ background: "radial-gradient(ellipse at 50% 45%, #0b1119 0%, #030508 55%, #010203 100%)" }}>
           <div ref={box} className="absolute inset-0">
             {size.w > 0 && features.length > 0 && d && (
               <WorldGlobe api={api} width={size.w} height={size.h} features={features} markers={markers} arcs={arcs} rotate={rotate}
@@ -429,7 +429,7 @@ export default function WorldMonitor() {
               </>}
             </div>
           )}
-        </main>
+        </section>
 
         {/* Panneau droit : fil international */}
         <aside className="hidden min-h-0 flex-col border-l border-line bg-[#05080d] lg:flex">

@@ -90,5 +90,14 @@ Détails et choix techniques : [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```sh
 cd backend && .venv/bin/python -m pytest   # statistiques, VaR, ES, Monte Carlo, ratios
-cd frontend && npm test                    # commandes, options, obligations, change, DCF…
+cd frontend && npm test                    # commandes, options, obligations, change, DCF, état des sources…
+cd frontend && npm run e2e                 # tests de fumée : chaque onglet s'ouvre sans erreur (Playwright)
 ```
+
+Les tests de fumée ouvrent les 30 onglets du menu, plus 7 modules avec un instrument (SPY, AAPL, EUR/USD), dans Chromium.
+Ils échouent sur une exception JavaScript, une erreur 500 du backend ou un encadré « Erreur » inexpliqué. Une source externe
+en panne (réponse 502) est seulement signalée (`⚠ … source en panne`) ; `STRICT_SOURCES=1 npm run e2e` la rend bloquante.
+Ils réutilisent le terminal s'il tourne, sinon le lancent. Première fois : `npx playwright install chromium`.
+
+Quand une source échoue au moins 3 fois d'affilée, un bandeau le signale sur tous les modules, avec les modules touchés
+(rouge pour une source majeure, orange pour une source secondaire comme un flux RSS) ; détails dans `SRC`.
