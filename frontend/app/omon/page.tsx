@@ -67,7 +67,7 @@ export default function OMON() {
             </tr>;
           })}</tbody>
         </table>}
-        <div className="px-2 py-1 text-[10px] text-dim">Fond coloré : dans la monnaie. VI et grecques calculées par la CBOE. Clic sur une ligne : valorisation dans OVME au marché (smile de la surface VOL, écart du prix coté vs surface). Options cotées aux États-Unis uniquement.</div>
+        <div className="px-2 py-1 text-[10px] text-dim">Fond coloré : dans la monnaie. VI et grecques fournies par la source (Tradier : modèle ORATS, mises à jour toutes les heures). Clic sur une ligne : valorisation dans OVME au marché (smile de la surface VOL, écart du prix coté vs surface). Options cotées aux États-Unis uniquement.</div>
       </Panel>
       <Panel className="col-span-12 md:col-span-6 xl:col-span-4" title="Surface de volatilité implicite" right={<SourceTag env={surf.env} />}>
         <State loading={surf.loading && !surf.data} error={surf.error} />
@@ -78,7 +78,7 @@ export default function OMON() {
         <State loading={hv.loading && !hv.data} error={hv.error} />
         {hv.data && <table><thead><tr><th>Fenêtre</th><th className="num">Actuelle</th><th className="num">Min 2 ans</th><th className="num">Médiane</th><th className="num">Max</th></tr></thead>
           <tbody>{Object.entries(hv.data).map(([n, v]) => <tr key={n}><td>{n} séances</td><td className="num text-fg">{num(v.current, 1)} %</td><td className="num">{num(v.min, 1)}</td><td className="num">{num(v.median, 1)}</td><td className="num">{num(v.max, 1)}</td></tr>)}
-            {d && <tr className="border-t border-amber"><td>Implicite 30 j (CBOE)</td><td className="num text-amber">{num(d.iv30, 1)} %</td><td colSpan={3} className="text-dim">prime de vol. : {num(d.iv30 - (hv.data["20"]?.current ?? NaN), 1)} pt vs 20 j</td></tr>}</tbody></table>}
+            {d && <tr className="border-t border-amber"><td>Implicite 30 j</td><td className="num text-amber">{num(d.iv30, 1)} %</td><td colSpan={3} className="text-dim">prime de vol. : {num(d.iv30 - (hv.data["20"]?.current ?? NaN), 1)} pt vs 20 j</td></tr>}</tbody></table>}
         {totals && <div className="px-2 py-1">Intérêt ouvert total : calls {big(totals.c)} · puts {big(totals.p)} · ratio put/call <span className="text-amber">{num(totals.p / totals.c, 2)}</span></div>}
         <div className="px-2 pb-1"><Link href={`/ovme?s=${encodeURIComponent(s)}`} className="text-info">OVME : calculateur et stratégies →</Link></div>
       </Panel>

@@ -19,7 +19,7 @@ export const down = (r: SourceRow, now: string) =>
 
 /** Modules alimentés par chaque source (motif sur le nom de la source) ; `minor` : une source parmi d'autres pour la même donnée. */
 const MAP: [RegExp, string, boolean?][] = [
-  [/^CBOE/, "Options (OMON) : chaîne et surface"],
+  [/^CBOE|^Tradier/, "Options (OMON) : chaîne et surface"],
   [/^Yahoo Finance \(RSS\)/, "News", true],
   [/^Yahoo/, "cours, graphiques et indices de la plupart des modules"],
   [/^ForexFactory/, "Calendrier (ECO), accueil, World Monitor"],

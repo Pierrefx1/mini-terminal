@@ -10,6 +10,9 @@ FRED_API_KEY = os.getenv("FRED_API_KEY", "").strip()
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "").strip()
 EIA_API_KEY = os.getenv("EIA_API_KEY", "").strip()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+# Options (OMON) : Tradier, clé gratuite d'un compte développeur ; TRADIER_ENV = sandbox (différé 15 min) ou production
+TRADIER_API_KEY = os.getenv("TRADIER_API_KEY", "").strip()
+TRADIER_ENV = os.getenv("TRADIER_ENV", "sandbox").strip().lower()
 RECAP_MODEL = os.getenv("RECAP_MODEL", "gemini-3.8-flash").strip()
 # Modèles essayés dans l'ordre si le principal est saturé (503/504) ou ne répond pas à temps.
 RECAP_FALLBACKS = [m.strip() for m in os.getenv("RECAP_FALLBACKS", "gemini-3.7-flash,gemini-3.5-flash").split(",") if m.strip()]

@@ -2,6 +2,8 @@
 import re
 from datetime import date
 
+import httpx
+
 from ..cache import SourceError
 from .http import get
 
@@ -19,7 +21,13 @@ class Cboe:
     name = "CBOE (différé)"
 
     def chain(self, symbol: str) -> dict:
-        r = get(f"{BASE}/options/{cboe_symbol(symbol)}.json")
+        try:
+            r = get(f"{BASE}/options/{cboe_symbol(symbol)}.json")
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 403:  # reste une panne (compte dans SRC), avec la marche à suivre
+                raise RuntimeError("CBOE refuse les appels automatisés (403). Configurer Tradier : TRADIER_API_KEY dans .env "
+                                   "(clé gratuite d'un compte développeur), puis relancer le terminal.") from e
+            raise
         try:
             d = r.json()["data"]
         except Exception:
