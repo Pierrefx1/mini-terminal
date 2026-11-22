@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 /**
- * Stockage dans ce navigateur (aucun compte) : portefeuilles, compte de paper trading, notes, alertes, espaces de travail.
+ * Stockage dans ce navigateur (aucun compte) : portefeuilles, notes, alertes, espaces de travail.
  * Toute lecture ou écriture est protégée : navigation privée ou stockage bloqué => l'état reste en mémoire.
  */
 export function readLocal<T>(key: string, fallback: T): T {

@@ -2,9 +2,9 @@
 
 Terminal de marché en local, inspiré des terminaux professionnels et utilisable sans compte. On y navigue par commandes (`AAPL US Equity DES`, `BRENT GP`, `WEI`…). Chaque donnée affiche sa source, sa nature (LIVE, DELAYED, HISTORICAL, SIMULATED) et son heure de relevé.
 
-14 modules : vue globale des marchés, actions et analyse fondamentale, obligataire, change (force des devises, positionnement CFTC, corrélations), matières premières (courbes à terme, spreads, stocks EIA, positionnement CFTC), options et pricer, économie, actualités, recherche, valorisation DCF, paper trading, portefeuilles, risque (VaR, stress tests), messagerie. Plus des alertes et l'export Excel.
+13 modules : vue globale des marchés, actions et analyse fondamentale, obligataire, change (force des devises, positionnement CFTC, corrélations), matières premières (courbes à terme, spreads, stocks EIA, positionnement CFTC), options et pricer, économie, actualités, recherche, valorisation DCF, portefeuilles, risque (VaR, stress tests), messagerie. Plus des alertes et l'export Excel.
 
-Documentation : [architecture](docs/ARCHITECTURE.md) · [les 14 modules, leurs sources et leurs limites](docs/MVP.md)
+Documentation : [architecture](docs/ARCHITECTURE.md) · [les 13 modules, leurs sources et leurs limites](docs/MVP.md)
 
 ## Lancer
 
@@ -51,7 +51,7 @@ Syntaxe : `<instrument> <FONCTION>` ou `<FONCTION> [instrument]`, puis Entrée. 
 | `WM` | World Monitor : globe 3D des risques géopolitiques (rouge), informations économiques (bleu), événements majeurs (orange) et places financières (blanc), avec liens entre places (corrélation 60 séances), corridors énergétiques et commerciaux, fil international |
 | `SRC` | État des sources de données : dernier succès, dernière erreur, taux d'échec, latence |
 | `YAS`, `EURUSD Curncy FWCV` | Obligataire, change à terme |
-| `TRADE`, `PORT`, `RISK` | Paper trading, portefeuilles, risque |
+| `PORT`, `RISK` | Portefeuilles, risque |
 | `RES`, `ALRT`, `MSG` | Recherche, alertes, messagerie |
 
 Clavier : `⌘K` ou `/` pour la barre de commandes (taper une lettre n'importe où fonctionne aussi), `↑ ↓` et `Tab` pour les suggestions, champ vide pour l'historique, `⌥1` à `⌥9` pour les onglets.
@@ -62,7 +62,7 @@ Clavier : `⌘K` ou `/` pour la barre de commandes (taper une lettre n'importe o
 |---|---|---|
 | WEI, DES, graphique, bandeau, watchlist | Yahoo Finance | Cours différés (DELAYED), API non officielle ; MSCI World approché par l'ETF URTH |
 | Matières premières | Yahoo (contrats par échéance), EIA, CFTC | Électricité, charbon, métaux LME : sous licence, non couverts |
-| Options, paper trading | CBOE (chaînes, bid/ask différés) | Options américaines uniquement ; exécutions simulées |
+| Options | CBOE (chaînes différées) | Options américaines uniquement |
 | Surface de volatilité (VOL) | Yahoo Finance via yfinance | Différé ; Yahoo ne publie pas de bid/ask hors séance US (15 h 30 – 22 h à Paris) : la surface n'est calculable qu'en séance, sinon la dernière surface connue est affichée « PÉRIMÉ » |
 | Obligataire | U.S. Treasury, BCE, FRED (OCDE, ICE BofA), BRI | Pas de cotations d'obligations individuelles |
 | Forex | Yahoo (cours), BRI (taux directeurs de 19 banques centrales), CFTC (rapports TFF et legacy), ForexFactory (agenda) | Pas de volatilité implicite (gré à gré) : volatilité réalisée ; COT limité aux contrats à terme, hebdomadaire ; portage calculé sur les taux directeurs |
@@ -89,5 +89,5 @@ Détails et choix techniques : [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```sh
 cd backend && .venv/bin/python -m pytest   # statistiques, VaR, ES, Monte Carlo, ratios
-cd frontend && npm test                    # commandes, options, obligations, change, DCF, paper trading…
+cd frontend && npm test                    # commandes, options, obligations, change, DCF…
 ```

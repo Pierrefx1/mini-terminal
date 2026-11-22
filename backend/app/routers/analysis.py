@@ -265,12 +265,3 @@ def central_banks():
     return {**env, "data": banks, "status": HISTORICAL}
 
 
-@router.get("/market/bidask")
-def bid_ask(symbol: str):
-    """Meilleure offre et demande différées (CBOE, actions et ETF américains) pour l'exécution simulée."""
-    def fetch():
-        q = options.quote(symbol)
-        if not q.get("bid") or not q.get("ask"):
-            raise SourceError(f"CBOE : pas de fourchette affichée pour « {symbol} »")
-        return q
-    return cached(f"bidask:{symbol.upper()}", 30, "CBOE (différé)", fetch, status=DELAYED)

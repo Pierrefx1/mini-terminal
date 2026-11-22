@@ -38,7 +38,7 @@ export default function Help() {
           <tr><td className="w-40 text-up">LIVE</td><td>Temps réel. Aucune source actuelle ne l&apos;est : le badge n&apos;apparaîtra qu&apos;avec un flux temps réel.</td></tr>
           <tr><td className="text-amber">DELAYED</td><td>Cours différés (Yahoo Finance) : délai variable selon la place.</td></tr>
           <tr><td className="text-info">HISTORICAL</td><td>Séries de fin de période (statistiques officielles, courbes de taux publiées).</td></tr>
-          <tr><td className="text-sim">SIMULATED</td><td>Réservé aux futurs modules de simulation (paper trading) : jamais des cours réels.</td></tr>
+          <tr><td className="text-sim">SIMULATED</td><td>Réservé aux modules de simulation : jamais des cours réels.</td></tr>
           <tr><td className="text-down">PÉRIMÉ</td><td>La source a échoué : la dernière valeur connue est affichée avec son heure.</td></tr>
         </tbody></table>
       </Panel>

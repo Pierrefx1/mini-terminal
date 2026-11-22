@@ -1,15 +1,13 @@
 "use client";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import EChart, { lineOption } from "@/components/EChart";
 import Export from "@/components/Export";
 import { Num, Out, Panel, SourceTag, State } from "@/components/ui";
 import { useApi, usePostApi } from "@/lib/api";
 import { big, num, pct, price, tone } from "@/lib/format";
-import * as P from "@/lib/paper";
 import { analysisBody, type Analysis, type Portfolio, usePortfolios } from "@/lib/portfolios";
-import { readLocal, uid } from "@/lib/store";
+import { uid } from "@/lib/store";
 
 function Bars({ rows }: { rows: { name: string; weight: number }[] }) {
   return <div className="space-y-0.5 px-2 py-1">{rows.map((r) => <div key={r.name} className="flex items-center gap-2"><span className="w-36 truncate">{r.name}</span>
@@ -17,19 +15,9 @@ function Bars({ rows }: { rows: { name: string; weight: number }[] }) {
 }
 
 export default function Port() {
-  const sp = useSearchParams();
   const { list, current, setCurrentId, save, remove, ready } = usePortfolios();
   const [draft, setDraft] = useState<Portfolio | null>(null);
   useEffect(() => { if (current) setDraft(current); }, [current?.id, ready]); // eslint-disable-line react-hooks/exhaustive-deps
-  // import des positions du compte de paper trading
-  useEffect(() => {
-    if (sp.get("src") !== "paper" || !ready) return;
-    const acc = readLocal<P.Account | null>("mt.paper", null);
-    const pos = Object.values(acc?.positions ?? {}).filter((p) => p.qty > 0);
-    if (!pos.length) return;
-    const p: Portfolio = { ...(current ?? list[0]), id: "paper", name: "Compte de paper trading", holdings: pos.map((x) => ({ symbol: x.symbol, weight: Math.round(x.qty * x.avgPrice) })) };
-    save(p); setCurrentId("paper");
-  }, [sp, ready]); // eslint-disable-line react-hooks/exhaustive-deps
   const [applied, setApplied] = useState<Portfolio | null>(null);
   useEffect(() => { if (current) setApplied(current); }, [current?.id, ready]); // eslint-disable-line react-hooks/exhaustive-deps
   const a = usePostApi<Analysis>(applied ? "/api/portfolio/analyze" : null, applied ? analysisBody(applied) : null);
@@ -67,9 +55,7 @@ export default function Port() {
             <td><button onClick={() => set({ holdings: draft.holdings.filter((_, j) => j !== i) })} className="text-down">×</button></td></tr>)}</tbody></table>
         <div className="flex gap-2 px-2 py-1">
           <button onClick={() => set({ holdings: [...draft.holdings, { symbol: "", weight: 10 }] })} className="border border-line px-2 text-info">+ instrument</button>
-          <button onClick={apply} className="bg-amber px-3 font-bold text-black">Analyser</button>
-          <Link href="/port?src=paper" className="ml-auto text-info">importer le paper trading</Link>
-        </div>
+          <button onClick={apply} className="bg-amber px-3 font-bold text-black">Analyser</button>        </div>
         <div className="px-2 pb-1 text-[10px] text-dim">Symboles de la source de cotation (AAPL, MC.PA, TLT, GC=F…). Poids relatifs, normalisés à 100 %. Portefeuilles enregistrés dans ce navigateur.</div>
       </Panel>
       <Panel className="col-span-12 lg:col-span-8" title={`Performance ${d ? `du ${d.start} au ${d.end} en ${d.base}` : ""}`} right={<><Link href="/risk" className="text-info">RISK →</Link><SourceTag env={a.env} /></>}>

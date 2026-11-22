@@ -70,10 +70,10 @@ mini-terminal/
 │   └── tests/                  pytest
 └── frontend/
     ├── app/                    une route par module : wei, des, fa, dcf, fi, fx, cmdty, omon, ovme,
-    │                           econ, trade, port, risk, research, msg, ws, alerts, help…
+    │                           econ, port, risk, research, msg, ws, alerts, help…
     ├── components/             Shell, CommandBar, AlertWatcher, Export, ui, PriceChart, EChart
     ├── lib/                    commands (analyseur), quant (options, obligations, change, matières,
-    │                           valorisation), paper (moteur d'exécution simulé), alerts, indicators,
+    │                           valorisation), alerts, indicators,
     │                           sessions, store (stockage navigateur), portfolios, api, format
     └── tests/                  tests Node (node --test) des modules purs
 ```
@@ -136,7 +136,6 @@ En place :
 
 | Point de courbe à terme | `routers/commodities.py` | `symbol, expiry, months, price` + métriques (forme, M1−M2, pente, rendement de roulement) |
 | Obligation | `lib/quant.ts` | `settle, maturity, coupon, freq, redemption` → prix, rendement, durations, convexité, DV01, Z-spread, OAS |
-| Ordre, exécution, position (simulés) | `lib/paper.ts` | `Order {side, type, qty, limit, stop, cond, ocoGroup, status}`, `Fill {price, ref, slippage, fees}`, `Position {qty, avgPrice, realized}` |
 | Portefeuille | `lib/portfolios.ts` (navigateur) | `holdings [{symbol, weight}], benchmark, base, years, rebalance, capital, rf` |
 | Note, alerte, favori | navigateur | voir `app/research`, `lib/alerts.ts` |
 | Messagerie | SQLite (`collab.py`) | `chat_users, chat_rooms, chat_members, chat_messages {body, attachment}` |
@@ -146,7 +145,7 @@ En place :
 ```sh
 cd backend && .venv/bin/python -m pytest      # statistiques de marché, VaR, ES, Monte Carlo, ratios, bêtas
 cd frontend && npm test                       # commandes, places, Black-Scholes, binomial, Monte Carlo, obligations,
-                                              # Z-spread, OAS, change à terme, matières, DCF, paper trading, alertes, indicateurs
+                                              # Z-spread, OAS, change à terme, matières, DCF, alertes, indicateurs
 ```
 
 Les calculs financiers et l'analyseur de commandes sont des fonctions pures, testées sans réseau contre des valeurs de référence (Hull pour les options, duration d'une obligation au pair, parité call-put, etc.). Les endpoints sont vérifiés contre les sources réelles à chaque livraison.

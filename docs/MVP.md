@@ -1,8 +1,8 @@
 # MARKET TERMINAL : cahier des charges et état des modules
 
-Les 14 modules du cahier des charges sont en place. Chaque donnée affiche sa source, sa nature (LIVE, DELAYED, HISTORICAL, SIMULATED) et son heure. Quand une donnée n'existe pas gratuitement, l'interface le dit au lieu de l'estimer.
+Les 13 modules du cahier des charges sont en place (le paper trading a été retiré). Chaque donnée affiche sa source, sa nature (LIVE, DELAYED, HISTORICAL, SIMULATED) et son heure. Quand une donnée n'existe pas gratuitement, l'interface le dit au lieu de l'estimer.
 
-## Les 14 modules
+## Les 13 modules
 
 | # | Module | Commandes | Contenu | Sources | Limites assumées |
 |---|---|---|---|---|---|
@@ -16,8 +16,7 @@ Les 14 modules du cahier des charges sont en place. Chaque donnée affiche sa so
 | 08 | News | `TOP`, `NEWS` | Fil de 13 flux, filtres pays et thème, recherche, news par instrument, alertes sur mot-clé | Flux RSS des éditeurs, Yahoo | Pas d'analyse de sentiment |
 | 09 | Research | `RES` | Fiche par actif, notes personnelles (types, étiquettes, archives, recherche), favoris, note de synthèse rédigée par IA à partir des seules données du terminal | Terminal, Google Gemini | Rapports de brokers sous licence ; texte IA signalé comme tel |
 | 10 | Valuation | `DCF` | DCF prérempli depuis les comptes publiés, CAPM avec bêta estimé, WACC, 3 scénarios, sensibilité WACC × croissance, multiples de comparables et de transactions | Yahoo, calculs du terminal | Bases de transactions M&A sous licence : multiples à saisir |
-| 11 | Trading & Execution | `TRADE` | Paper trading : ordres au marché, limite, stop, stop-limite, OCO, conditionnels ; carnet simulé autour du vrai bid/ask CBOE ; glissement et impact de marché modélisés ; positions, prix moyen, P&L réalisé et latent, exposition, historique | CBOE, Yahoo | Tout est SIMULATED ; aucune transaction réelle |
-| 12 | Portfolio Management | `PORT` | Portefeuilles multiples, poids cibles, référence, devise de base, rééquilibrage, performance, contributions, expositions (secteur, pays, devise), ordres de rééquilibrage, import du paper trading | Yahoo (cours ajustés), BCE | Stockés dans le navigateur |
+| 12 | Portfolio Management | `PORT` | Portefeuilles multiples, poids cibles, référence, devise de base, rééquilibrage, performance, contributions, expositions (secteur, pays, devise), ordres de rééquilibrage | Yahoo (cours ajustés), BCE | Stockés dans le navigateur |
 | 13 | Risk Management | `RISK` | VaR et ES historiques, paramétriques et Monte Carlo (1 et 10 jours), Sharpe, Sortino, bêta, alpha, drawdown, concentration, corrélations, attribution du risque, bêtas factoriels (taux, dollar, or, pétrole), 5 stress tests historiques et 7 hypothétiques | Yahoo, calculs du terminal | Approximation linéaire pour les chocs factoriels |
 | 14 | Communication | `MSG` | Messagerie entre utilisateurs du serveur : pseudo sans mot de passe, conversations individuelles et de groupe, partage d'instruments et de cotations, statut, présence, non-lus, notifications | Base du serveur | En local, seuls les navigateurs de la machine échangent ; il faut déployer pour les échanges à distance |
 

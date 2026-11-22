@@ -52,7 +52,6 @@ export const FUNCTIONS: Fn[] = [
   { code: "OVME", label: "Valorisation d'options et stratégies", security: "optional", route: (s) => `/ovme${q(s)}`, example: "OVME" },
   { code: "VOL", label: "Surface de volatilité implicite 3D, structure par terme, smile, skew (yfinance, Black-76)", security: "optional", route: (s) => `/vol${q(s)}`, example: "VOL QQQ" },
   { code: "ECST", label: "Economics : banques centrales, impact des publications", security: "none", route: () => "/econ", example: "ECST" },
-  { code: "TRADE", label: "Paper trading : ordres, carnet, positions, P&L (simulé)", security: "optional", route: (s) => `/trade${q(s)}`, example: "AAPL US Equity TRADE" },
   { code: "PORT", label: "Portefeuilles : allocation, performance, expositions, rééquilibrage", security: "none", route: () => "/port", example: "PORT" },
   { code: "RISK", label: "Risque : VaR, ES, stress tests, Monte Carlo, corrélations", security: "none", route: () => "/risk", example: "RISK" },
   { code: "RES", label: "Recherche : fiche, notes, favoris, note IA", security: "optional", route: (s) => `/research${q(s)}`, example: "NVDA US Equity RES" },

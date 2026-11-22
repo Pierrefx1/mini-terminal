@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import * as Q from "../lib/quant.ts";
-import * as P from "../lib/paper.ts";
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg ?? ""} ${a} ≠ ${b} (±${tol})`);
 
@@ -125,47 +124,6 @@ test("médiane", () => {
   assert.equal(Q.median([]), null);
 });
 
-test("paper trading : exécution, prix moyen, P&L réalisé et latent", () => {
-  const costs = { spreadBps: 0, impactCoef: 0, feeBps: 0, minFee: 0 };
-  const q = { AAPL: { last: 100, bid: 99.9, ask: 100.1 } };
-  let a = P.newAccount(10_000);
-  a = P.submit(a, { id: "1", symbol: "AAPL", side: "BUY", type: "MARKET", qty: 10 }, q, 1, costs);
-  assert.equal(a.positions.AAPL.qty, 10); assert.equal(a.positions.AAPL.avgPrice, 100.1);
-  a = P.submit(a, { id: "2", symbol: "AAPL", side: "BUY", type: "MARKET", qty: 10 }, { AAPL: { last: 110, bid: 109.9, ask: 110.1 } }, 2, costs);
-  near(a.positions.AAPL.avgPrice, 105.1, 1e-9);
-  a = P.submit(a, { id: "3", symbol: "AAPL", side: "SELL", type: "MARKET", qty: 5 }, { AAPL: { last: 120, bid: 119.9, ask: 120.1 } }, 3, costs);
-  near(a.positions.AAPL.realized, 5 * (119.9 - 105.1), 1e-9);
-  const v = P.valuation(a, { AAPL: { last: 120 } });
-  near(v.unrealized, 15 * (120 - 105.1), 1e-9);
-  near(v.equity, 10_000 + v.pnl, 1e-9);
-  near(v.pnl, v.realized + v.unrealized, 1e-9, "P&L = réalisé + latent sans frais");
-});
-
-test("ordres limite, stop et OCO", () => {
-  const costs = { spreadBps: 0, impactCoef: 0, feeBps: 0, minFee: 0 };
-  let a = P.newAccount(10_000);
-  a = P.submit(a, { id: "L", symbol: "X", side: "BUY", type: "LIMIT", qty: 1, limit: 95 }, { X: { last: 100 } }, 1, costs);
-  assert.equal(a.orders[0].status, "WORKING");
-  a = P.evaluate(a, { X: { last: 94 } }, 2, costs);
-  assert.equal(a.orders.find((o) => o.id === "L").status, "FILLED");
-  a = P.submit(a, { id: "TP", symbol: "X", side: "SELL", type: "LIMIT", qty: 1, limit: 110, ocoGroup: "g" }, { X: { last: 100 } }, 3, costs);
-  a = P.submit(a, { id: "SL", symbol: "X", side: "SELL", type: "STOP", qty: 1, stop: 90, ocoGroup: "g" }, { X: { last: 100 } }, 4, costs);
-  a = P.evaluate(a, { X: { last: 89 } }, 5, costs);
-  assert.equal(a.orders.find((o) => o.id === "SL").status, "FILLED");
-  assert.equal(a.orders.find((o) => o.id === "TP").status, "CANCELLED");
-  assert.equal(a.positions.X.qty, 0);
-  const r = P.submit(a, { id: "Z", symbol: "X", side: "BUY", type: "LIMIT", qty: 1 }, { X: { last: 1 } });
-  assert.equal(r.orders[0].status, "REJECTED");
-});
-
-test("coûts : glissement et impact augmentent avec la taille", () => {
-  const q = { last: 100, adv: 1_000_000, vol: 0.3 };
-  assert.ok(P.impact(q, 100_000) > P.impact(q, 1_000));
-  const t = P.touch({ last: 100 }, { ...P.DEFAULT_COSTS, spreadBps: 10 });
-  near(t.ask - t.bid, 0.1, 1e-12); assert.equal(t.modelled, true);
-  assert.equal(P.syntheticBook({ last: 100, bid: 99.9, ask: 100.1 }).bids.length, 5);
-});
-
 test("alertes de prix et d'actualité", async () => {
   const A = await import("../lib/alerts.ts");
   const al = [{ id: "a", kind: "price", active: true, created: 0, symbol: "X", op: ">=", price: 10 }, { id: "b", kind: "price", active: true, created: 0, symbol: "X", op: "<=", price: 5 },
@@ -186,14 +144,6 @@ test("indicateurs techniques : ATR, VWAP, supports et résistances", async () =>
   const lv = I.levels(wave, 3, 0.02);
   assert.ok(lv.some((l) => l.kind === "résistance" && Math.abs(l.price - 111) < 1.5));
   assert.ok(lv.some((l) => l.kind === "support" && Math.abs(l.price - 89) < 1.5));
-});
-
-test("paper trading : fourchette réelle écartée si elle est décalée du dernier cours", () => {
-  const ok = P.touch({ last: 100, bid: 99.9, ask: 100.1 });
-  assert.equal(ok.modelled, false);
-  const stale = P.touch({ last: 355.29, bid: 350.9, ask: 351.08 }); // fourchette de la veille, cas observé le 18/11
-  assert.equal(stale.modelled, true); assert.equal(stale.stale, true);
-  near((stale.bid + stale.ask) / 2, 355.29, 1e-9);
 });
 
 test("P&L de stratégie : échéance = payoff, vega du straddle, vol par jambe", () => {

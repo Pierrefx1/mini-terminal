@@ -42,7 +42,6 @@ export const NAV: NavGroup[] = [
     { code: "RES", href: "/research", label: "Recherche", icon: "book", desc: "Fiche par actif, notes, favoris, note rédigée par IA", example: "NVDA US Equity RES" },
   ] },
   { title: "Trading et risque", color: "#ff4d4d", items: [
-    { code: "TRADE", href: "/trade", label: "Paper trading", icon: "swap", desc: "Ordres simulés, carnet, positions, P&L", example: "AAPL US Equity TRADE" },
     { code: "PORT", href: "/port", label: "Portefeuilles", icon: "pie", desc: "Allocation, performance, expositions, rééquilibrage", example: "PORT" },
     { code: "RISK", href: "/risk", label: "Risque", icon: "shield", desc: "VaR, Expected Shortfall, stress tests, scénarios de chocs personnalisés, corrélations", example: "RISK" },
     { code: "ALRT", href: "/alerts", label: "Alertes", icon: "bell", desc: "Alertes de prix et de mots-clés d'actualité", example: "ALRT" },
