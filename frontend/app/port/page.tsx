@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import EChart, { lineOption } from "@/components/EChart";
+import EChart, { lineOption, PALETTE } from "@/components/EChart";
 import Export from "@/components/Export";
 import { Num, Out, Panel, SourceTag, State } from "@/components/ui";
 import { useApi, usePostApi } from "@/lib/api";
@@ -9,9 +9,29 @@ import { big, num, pct, price, tone } from "@/lib/format";
 import { analysisBody, type Analysis, type Portfolio, usePortfolios } from "@/lib/portfolios";
 import { uid } from "@/lib/store";
 
-function Bars({ rows }: { rows: { name: string; weight: number }[] }) {
-  return <div className="space-y-0.5 px-2 py-1">{rows.map((r) => <div key={r.name} className="flex items-center gap-2"><span className="w-36 truncate">{r.name}</span>
-    <span className="h-2 flex-1 bg-line"><span className="block h-2 bg-amber" style={{ width: `${Math.min(100, r.weight)}%` }} /></span><span className="num w-14">{num(r.weight, 1)} %</span></div>)}</div>;
+/** Camembert d'une répartition ; au-delà de 7 parts, les plus petites sont regroupées dans « Autres ». */
+function Pie({ rows }: { rows: { name: string; weight: number }[] }) {
+  const parts = useMemo(() => {
+    const s = [...rows].filter((r) => r.weight > 0).sort((a, b) => b.weight - a.weight);
+    if (s.length <= PALETTE.length) return s;
+    const head = s.slice(0, PALETTE.length - 1);
+    return [...head, { name: "Autres", weight: s.slice(PALETTE.length - 1).reduce((t, r) => t + r.weight, 0) }];
+  }, [rows]);
+  const option = useMemo(() => ({
+    tooltip: { trigger: "item", backgroundColor: "#0e1828", borderColor: "#1c2b42", textStyle: { color: "#d4dbe6", fontSize: 11 }, formatter: (p: any) => `${p.marker} ${p.name} : <b>${num(p.value, 1)} %</b>` },
+    series: [{ type: "pie", radius: "88%", center: ["50%", "50%"], label: { show: false }, labelLine: { show: false },
+      itemStyle: { borderColor: "#08101d", borderWidth: 1 }, emphasis: { scale: true, scaleSize: 4 },
+      data: parts.map((r) => ({ name: r.name, value: r.weight })) }],
+  }), [parts]);
+  if (!parts.length) return <div className="px-2 py-1 text-dim">–</div>;
+  return (
+    <div className="flex items-center gap-2 px-2 py-1">
+      <div className="h-32 w-32 shrink-0"><EChart option={option} /></div>
+      <div className="min-w-0 flex-1 space-y-0.5">{parts.map((r, i) => (
+        <div key={r.name} className="flex items-center gap-1.5"><span className="h-2 w-2 shrink-0" style={{ background: PALETTE[i % PALETTE.length] }} />
+          <span className="flex-1 truncate">{r.name}</span><span className="num">{num(r.weight, 1)} %</span></div>))}</div>
+    </div>
+  );
 }
 
 export default function Port() {
@@ -72,7 +92,7 @@ export default function Port() {
         </>}
       </Panel>
       {d && <>
-        <Panel className="col-span-12 xl:col-span-8" title="Lignes : allocation, performance, contribution, rééquilibrage" right={<Export name={`portefeuille-${draft.name}`} columns={["Symbole", "Nom", "Secteur", "Pays", "Devise", "Poids cible %", "Poids actuel %", "Performance %", "Contribution %", "Contribution au risque %"]}
+        <Panel className="col-span-12" title="Lignes : allocation, performance, contribution, rééquilibrage" right={<Export name={`portefeuille-${draft.name}`} columns={["Symbole", "Nom", "Secteur", "Pays", "Devise", "Poids cible %", "Poids actuel %", "Performance %", "Contribution %", "Contribution au risque %"]}
           rows={d.lines.map((l) => [l.symbol, l.name, l.sector, l.country, l.currency, l.target * 100, l.current * 100, l.return_pct, l.contribution_pct, l.risk_contribution_pct])} source={a.env?.source} />}>
           <table><thead><tr><th>Instrument</th><th>Secteur</th><th>Pays</th><th>Devise</th><th className="num">Cible</th><th className="num">Actuel</th><th className="num">Écart</th><th className="num">Perf.</th><th className="num">Contrib.</th><th className="num">Risque</th><th className="num">Cours</th><th className="num">Ordre de rééquilibrage</th></tr></thead>
             <tbody>{d.lines.map((l) => {
@@ -86,10 +106,11 @@ export default function Port() {
             })}</tbody></table>
           <div className="px-2 py-1 text-[10px] text-dim">Contribution : poids initial × performance de la ligne (somme = performance du portefeuille en achat-conservation). Risque : part de la variance sur un an. Rééquilibrage : montants en {d.base} pour revenir aux poids cibles ; nombre de titres approché au cours en devise locale.</div>
         </Panel>
-        <Panel className="col-span-12 md:col-span-4 xl:col-span-4" title="Expositions">
-          <div className="px-2 pt-1 text-[10px] uppercase text-amber">Secteurs</div><Bars rows={d.sectors} />
-          <div className="px-2 pt-1 text-[10px] uppercase text-amber">Pays</div><Bars rows={d.countries} />
-          <div className="px-2 pt-1 text-[10px] uppercase text-amber">Devises</div><Bars rows={d.currencies} />
+        <Panel className="col-span-12" title="Expositions">
+          <div className="grid grid-cols-1 gap-x-4 md:grid-cols-3">
+            {([["Secteurs", d.sectors], ["Pays", d.countries], ["Devises", d.currencies]] as const).map(([t, rows]) => (
+              <div key={t}><div className="px-2 pt-1 text-[10px] uppercase text-amber">{t}</div><Pie rows={rows} /></div>))}
+          </div>
         </Panel>
       </>}
     </div>
