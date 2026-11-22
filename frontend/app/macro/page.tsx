@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import EChart, { lineOption, type Line } from "@/components/EChart";
 import { Panel, Seg, SourceTag, State } from "@/components/ui";
@@ -7,7 +8,6 @@ import { dateOnly, num } from "@/lib/format";
 
 type Row = { date: string } & Record<string, number | null>;
 type Yields = { nominal: Row[]; real: Row[] };
-type Bank = { area: string; bank: string; rate: number; date: string; previous: number | null; last_change: string; steps: [string, number][] };
 type Ind = { key: string; id: string; label: string; unit: string; group: string; transform: string };
 type IndData = Ind & { title: string; last_updated: string; obs: [string, number][] };
 
@@ -56,7 +56,6 @@ function Indicator({ ind }: { ind: Ind }) {
 
 export default function Macro() {
   const y = useApi<Yields>("/api/macro/yields");
-  const pol = useApi<{ banks: Bank[] }>("/api/macro/policy");
   const cat = useRaw<Ind[]>("/api/macro/catalog");
   const status = useRaw<{ keys: { fred: boolean } }>("/api/status");
   const [sel, setSel] = useState("10A");
@@ -92,11 +91,18 @@ export default function Macro() {
     return lineOption([{ name: KEY_ROWS.find((k) => k.id === sel)!.label, data }], { unit: " %" });
   }, [sel, hz, nominal, real, last, y.data]);
 
-  const polOpt = useMemo(() => pol.data && lineOption(pol.data.banks.map((b) => ({ name: b.bank, data: b.steps.filter((s) => s[0] >= "2015-01-01"), step: true })), { unit: " %" }), [pol.data]);
   const groups = useMemo(() => { const g: Record<string, Ind[]> = {}; (cat.data ?? []).forEach((i) => (g[i.group] ??= []).push(i)); return g; }, [cat.data]);
 
   return (
     <div className="h-full overflow-auto">
+      <div className="mb-1 flex flex-wrap items-center gap-x-4 gap-y-0.5 border border-line bg-panel px-2 py-1">
+        <span className="text-[11px] uppercase tracking-wider text-amber">MAC · macro US</span>
+        <span className="text-dim">États-Unis en haute fréquence : courbe du Trésor, inflation, emploi, activité, monnaie (FRED)</span>
+        <span className="ml-auto flex gap-4">
+          <Link href="/econ" className="text-info">ECST · taux directeurs et décisions des banques centrales →</Link>
+          <Link href="/data?c=US" className="text-info">DATA · comparer les États-Unis aux autres pays →</Link>
+        </span>
+      </div>
       <div className="grid grid-cols-12 gap-1">
         <Panel title="Courbe des taux US" className="col-span-5 h-80" right={<><input type="date" value={custom} max={last?.date} onChange={(e) => setCustom(e.target.value)} title="Ajouter une date de comparaison" /><SourceTag env={y.env} /></>}>
           <State loading={y.loading} error={y.error} />{curve && <EChart option={curve} />}
@@ -112,14 +118,6 @@ export default function Macro() {
         <Panel title={`Historique · ${KEY_ROWS.find((k) => k.id === sel)!.label}`} className="col-span-4 h-80" right={<Seg value={hz} options={Object.keys(HORIZONS) as (keyof typeof HORIZONS)[]} onChange={setHz} />}>
           {hist && <EChart option={hist} />}
         </Panel>
-        <Panel title="Taux directeurs" className="col-span-4 h-72" right={<SourceTag env={pol.env} />}>
-          <State loading={pol.loading} error={pol.error} />
-          <table><thead><tr><th>Banque centrale</th><th className="num">Taux %</th><th className="num">Préc.</th><th className="num">Dernier mouvement</th></tr></thead>
-            <tbody>{pol.data?.banks.map((b) => (
-              <tr key={b.area}><td>{b.bank}</td><td className="num">{num(b.rate, 3)}</td>
-                <td className={`num ${b.previous == null ? "" : b.rate > b.previous ? "text-up" : "text-down"}`}>{num(b.previous, 3)}</td><td className="num text-dim">{dateOnly(b.last_change)}</td></tr>))}</tbody></table>
-        </Panel>
-        <Panel title="Taux directeurs depuis 2015" className="col-span-8 h-72">{polOpt && <EChart option={polOpt} />}</Panel>
       </div>
       {status.data && !status.data.keys.fred && (
         <div className="my-1 border border-amber/60 p-2 text-amber">

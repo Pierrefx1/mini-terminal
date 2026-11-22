@@ -18,7 +18,7 @@ export const NAV: NavGroup[] = [
   { title: "Taux et change", color: "#c77dff", items: [
     { code: "YAS", href: "/fi", label: "Obligataire", icon: "percent", desc: "Courbes des taux, souverains, crédit, calculateur d'obligation", example: "YAS" },
     { code: "FX", href: "/fx", label: "Forex", icon: "fx", desc: "Paires, force des devises, taux directeurs, COT, corrélations, analyse de paire, terme et options", example: "EURUSD Curncy FX" },
-    { code: "MAC", href: "/macro", label: "Macro", icon: "pulse", desc: "Courbes du Trésor, taux directeurs, indicateurs US", example: "MAC" },
+    { code: "MAC", href: "/macro", label: "Macro US", icon: "pulse", desc: "États-Unis en haute fréquence : courbe du Trésor, inflation, emploi, activité, monnaie (FRED)", example: "MAC" },
   ] },
   { title: "Matières premières", color: "#e6e600", items: [
     { code: "CMDTY", href: "/cmdty", label: "Commodities", icon: "barrel", desc: "Pétrole, gaz, métaux, agriculture : tableau, courbes à terme, spreads, saisonnalité", example: "BRENT CMDTY" },
@@ -32,10 +32,10 @@ export const NAV: NavGroup[] = [
     { code: "VOL", href: "/vol", label: "Vol Surface", icon: "surface", desc: "Surface de volatilité 3D, structure par terme ATM, smile, skew et butterfly", example: "VOL SPY" },
   ] },
   { title: "Économie", color: "#1fd15f", items: [
-    { code: "ECST", href: "/econ", label: "Banques centrales", icon: "bank", desc: "Taux directeurs, décisions, impact des publications", example: "ECST" },
+    { code: "ECST", href: "/econ", label: "Banques centrales", icon: "bank", desc: "Taux directeurs des grandes banques centrales, historique depuis 2015, impact des publications", example: "ECST" },
     { code: "ECO", href: "/calendrier", label: "Calendrier", icon: "calendar", desc: "Publications économiques, consensus, précédents", example: "ECO" },
     { code: "FCST", href: "/forecasts", label: "Prévisions", icon: "trend", desc: "Prévisions OCDE, anticipations de taux de la Fed", example: "FCST" },
-    { code: "DATA", href: "/data", label: "Données pays", icon: "flag", desc: "Carte du monde interactive : fiche complète de chaque pays (croissance, inflation, emploi, taux, dette, commerce), classements et comparaisons", example: "DATA" },
+    { code: "DATA", href: "/data", label: "Données pays", icon: "flag", desc: "Comparaisons internationales sur une carte du monde : fiche de chaque pays (croissance, inflation, emploi, taux, dette, commerce), classements et comparaisons", example: "DATA" },
   ] },
   { title: "Infos et recherche", color: "#ff4d9a", items: [
     { code: "TOP", href: "/news", label: "News", icon: "news", desc: "Articles illustrés, lecteur, fil des dépêches, TV d'information en direct, news par instrument", example: "NEWS NVDA" },

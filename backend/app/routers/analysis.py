@@ -261,7 +261,7 @@ def impact(release: str = "cpi", years: int = 5):
 def central_banks():
     from ..providers.registry import policy
     env = cached("policy", 6 * 3600, policy.name, policy.policy_rates)
-    banks = [{**{k: b[k] for k in ("area", "bank", "rate", "date", "last_change", "previous")}, "history": b["steps"][-15:]} for b in env["data"]["banks"]]
+    banks = [{**{k: b[k] for k in ("area", "bank", "rate", "date", "last_change", "previous")}, "history": [s for s in b["steps"] if s[0] >= "2015-01-01"]} for b in env["data"]["banks"]]
     return {**env, "data": banks, "status": HISTORICAL}
 
 

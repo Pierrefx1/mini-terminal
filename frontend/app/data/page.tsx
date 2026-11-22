@@ -1,5 +1,6 @@
 "use client";
 import * as echarts from "echarts";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import EChart, { lineOption } from "@/components/EChart";
@@ -180,7 +181,8 @@ export default function DataPage() {
             {t && <span>· {[...new Set(t.rows.map((r) => r.source.split(" (")[0]))].join(" + ")} · {t.rows.length} indicateurs{t.rows.some((r) => r.freq === "M" || r.freq === "T") ? ", dont mensuels ou trimestriels" : ", annuels"}</span>}
             {rank && ind && <span className="text-amber">· {rank.pos}e sur {rank.n} pays pour « {ind.label} »</span>}
           </div>
-          {table.env?.error && <div className="border-b border-down/60 px-2 py-1 text-[10px] text-down">{table.env.error}</div>}
+          {country === "US" && <div className="border-b border-line px-2 py-1 text-[10px] text-dim">Ici, les États-Unis sont comparés aux autres pays, souvent en données annuelles. Séries mensuelles et hebdomadaires (CPI, PCE, NFP, inscriptions au chômage) et courbe des taux : <Link href="/macro" className="text-info">MAC · macro US →</Link></div>}
+          {table.env?.error &&<div className="border-b border-down/60 px-2 py-1 text-[10px] text-down">{table.env.error}</div>}
           <State loading={table.loading && !t} error={table.error} />
           {t && <>
             <div className="grid grid-cols-2 gap-px border-b border-line bg-line sm:grid-cols-4">

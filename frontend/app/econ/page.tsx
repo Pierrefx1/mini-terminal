@@ -14,7 +14,7 @@ export default function Econ() {
   const cb = useApi<Bank[]>("/api/economics/central-banks", 60 * 60_000);
   const [rel, setRel] = useState("cpi");
   const imp = useApi<Impact>(`/api/economics/impact?release=${rel}`);
-  const opt = useMemo(() => cb.data && lineOption(cb.data.filter((b) => ["Fed", "BCE", "BoE", "BoJ", "PBoC"].includes(b.bank)).map((b) => ({ name: b.bank, data: b.history.map(([d, v]) => [d, v] as [string, number]), step: true })), { unit: " %" }), [cb.data]);
+  const opt = useMemo(() => cb.data && lineOption(cb.data.map((b) => ({ name: b.bank, data: b.history.map(([d, v]) => [d, v] as [string, number]), step: true })), { unit: " %" }), [cb.data]);
   const fmtMove = (v: number, unit: string) => (unit === "pb" ? `${v > 0 ? "+" : ""}${num(v, 1)} pb` : pct(v));
   return (
     <div className="grid h-full grid-cols-12 gap-1 overflow-auto">
@@ -24,7 +24,7 @@ export default function Econ() {
           <tbody>{cb.data?.map((b) => <tr key={b.area}><td className="text-amber">{b.bank}</td><td className="num text-fg">{num(b.rate, 3)} %</td><td className="num">{b.previous == null ? "–" : `${num(b.previous, 3)} %`}</td>
             <td className="num">{dateOnly(b.last_change)}</td><td className={`num ${tone(b.previous == null ? null : b.rate - b.previous)}`}>{b.previous == null ? "–" : `${b.rate > b.previous ? "+" : ""}${Math.round((b.rate - b.previous) * 100)} pb`}</td></tr>)}</tbody></table>
         <div className="h-56">{opt && <EChart option={opt} />}</div>
-        <div className="px-2 py-1 text-[10px] text-dim">Historique des 15 dernières décisions par banque. Anticipations de marché pour la Fed : <Link href="/forecasts" className="text-info">FCST</Link> ; courbes : <Link href="/fi" className="text-info">YAS</Link>.</div>
+        <div className="px-2 py-1 text-[10px] text-dim">Taux directeurs depuis 2015 (clic sur la légende pour masquer une banque). Comparaison des taux d&apos;une quarantaine de pays : <Link href="/data?k=policy" className="text-info">DATA</Link>. Anticipations de marché pour la Fed : <Link href="/forecasts" className="text-info">FCST</Link> ; courbes : <Link href="/fi" className="text-info">YAS</Link>.</div>
       </Panel>
       <Panel className="col-span-12 xl:col-span-7" title="Impact des publications sur les classes d'actifs" right={<><Seg value={rel} options={RELEASES} onChange={setRel} /><SourceTag env={imp.env} /></>}>
         <State loading={imp.loading && !imp.data} error={imp.error} />
@@ -40,8 +40,8 @@ export default function Econ() {
       <Panel className="col-span-12" title="Autres outils économiques">
         <div className="flex flex-wrap gap-4 px-2 py-2">
           <Link href="/calendrier" className="text-info">ECO · calendrier, consensus et précédents →</Link>
-          <Link href="/macro" className="text-info">MAC · indicateurs US (CPI, PCE, NFP, chômage, PIB, production, ventes, confiance, immobilier) →</Link>
-          <Link href="/data" className="text-info">DATA · comparaisons internationales (dette, déficit, balance commerciale) →</Link>
+          <Link href="/macro" className="text-info">MAC · macro US : courbe du Trésor, CPI, PCE, NFP, chômage, PIB, production, ventes, confiance →</Link>
+          <Link href="/data" className="text-info">DATA · données pays : carte, fiches et comparaisons internationales →</Link>
           <Link href="/forecasts" className="text-info">FCST · prévisions OCDE et anticipations de taux →</Link>
         </div>
       </Panel>
