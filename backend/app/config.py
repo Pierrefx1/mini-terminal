@@ -16,4 +16,5 @@ RECAP_FALLBACKS = [m.strip() for m in os.getenv("RECAP_FALLBACKS", "gemini-3.7-f
 GEMINI_TIMEOUT = float(os.getenv("GEMINI_TIMEOUT", "90"))  # secondes par tentative
 USER_AGENT = "market-terminal/0.2"
 # La SEC refuse les requêtes sans User-Agent identifiable ; un contact réel est recommandé (voir .env.example).
-SEC_USER_AGENT = os.getenv("SEC_USER_AGENT", "").strip() or "market-terminal research-tool admin@example.com"
+# La SEC exige un User-Agent identifiant l'utilisateur (« Nom email@domaine ») : pas de valeur par défaut partagée
+SEC_USER_AGENT = os.getenv("SEC_USER_AGENT", "").strip()

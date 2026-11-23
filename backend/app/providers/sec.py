@@ -4,12 +4,14 @@ import httpx
 from ..cache import SourceError
 from ..config import SEC_USER_AGENT
 
-client = httpx.Client(timeout=30, follow_redirects=True, headers={"User-Agent": SEC_USER_AGENT, "Accept-Encoding": "gzip, deflate"})
+client = httpx.Client(timeout=30, follow_redirects=True, headers={"User-Agent": SEC_USER_AGENT or "market-terminal", "Accept-Encoding": "gzip, deflate"})
 TICKERS = "https://www.sec.gov/files/company_tickers.json"
 FACTS = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
 
 
 def _get(url: str) -> dict:
+    if not SEC_USER_AGENT:
+        raise SourceError("SEC : renseigner SEC_USER_AGENT dans .env (« Nom email@domaine »), contact exigé par la SEC")
     try:
         r = client.get(url)
     except httpx.TransportError as e:

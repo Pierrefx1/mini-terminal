@@ -1,5 +1,5 @@
 """
-vol_surface.py — Surface de volatilité implicite (équivalent maison d'OVDV Bloomberg), commande VOL du terminal.
+vol_surface.py — Surface de volatilité implicite, commande VOL du terminal.
 
 Pipeline (standard desk) :
 1. Chaîne d'options (yfinance, gratuit ; remplaçable par IBKR)
