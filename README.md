@@ -1,5 +1,11 @@
 # MARKET TERMINAL
 
+> **English summary.** A self-hosted, command-driven market terminal (FastAPI + Next.js) built entirely on free data
+> sources: equities, rates, FX, commodities, options and volatility surfaces, macro, news, portfolio analytics and risk
+> (VaR, stress tests). Every figure shows its source, its nature (LIVE, DELAYED, HISTORICAL) and its timestamp; when a
+> source fails, the last known value is shown flagged as stale. The interface is in French. Run it locally with
+> `./start.sh` (Python 3.12, Node 20+). Not investment advice; see [Avertissement](#avertissement) and the [MIT licence](LICENSE).
+
 Terminal de marché en local, inspiré des terminaux professionnels et utilisable sans compte. On y navigue par commandes (`AAPL US Equity DES`, `BRENT GP`, `WEI`…). Chaque donnée affiche sa source, sa nature (LIVE, DELAYED, HISTORICAL, SIMULATED) et son heure de relevé.
 
 13 modules : vue globale des marchés, actions et analyse fondamentale, obligataire, change (force des devises, positionnement CFTC, corrélations), matières premières (courbes à terme, spreads, stocks EIA, positionnement CFTC), options et pricer, économie, actualités, recherche, valorisation DCF, portefeuilles, risque (VaR, stress tests), messagerie. Plus des alertes et l'export Excel.
@@ -14,6 +20,8 @@ Documentation : [architecture](docs/ARCHITECTURE.md) · [les 13 modules, leurs s
 
 Le premier lancement installe les dépendances et construit l'interface, puis ouvre http://localhost:3000. Prérequis : Python 3.12 (`PYTHON=/chemin/python ./start.sh` pour en choisir un autre) et Node 20 ou plus.
 
+L'interface n'est accessible que depuis ce poste. `HOST=0.0.0.0 ./start.sh` l'ouvre au réseau local (pour la consulter depuis un téléphone, par exemple) : il n'y a pas d'authentification, à réserver à un réseau de confiance. Le terminal n'est pas conçu pour être exposé sur Internet.
+
 ## Configuration (`.env`)
 
 Créé au premier lancement à partir de `.env.example`.
@@ -24,6 +32,7 @@ Créé au premier lancement à partir de `.env.example`.
 | `GEMINI_API_KEY` | Clé API Google Gemini (aistudio.google.com). Active le récap marché IA de la page d'accueil. |
 | `RECAP_MODEL` | Modèle Gemini du récap et des notes de recherche (défaut `gemini-3.8-flash`). |
 | `EIA_API_KEY` | Clé gratuite (eia.gov/opendata). Stocks de pétrole et de gaz du module matières premières ; sans elle, la clé de démonstration publique, vite épuisée. |
+| `SEC_USER_AGENT` | Votre nom et votre e-mail (`Prénom Nom vous@domaine.fr`), que la SEC exige de chaque utilisateur de son API. Active l'historique des fondamentaux sur 15 ans (FA) ; sans lui, cette partie de FA affiche un message demandant de le renseigner, le reste du module (états Yahoo) fonctionne. |
 
 Facultatif : `VOL_WATCH` (défaut `SPY,QQQ,IWM`), sous-jacents dont la surface est capturée chaque jour de bourse à 15 h 30 (New York) pour l'historique de VOL.
 
@@ -101,3 +110,15 @@ Ils réutilisent le terminal s'il tourne, sinon le lancent. Première fois : `np
 
 Quand une source échoue au moins 3 fois d'affilée, un bandeau le signale sur tous les modules, avec les modules touchés
 (rouge pour une source majeure, orange pour une source secondaire comme un flux RSS) ; détails dans `SRC`.
+
+## Avertissement
+
+Outil d'information et d'apprentissage, sans aucune garantie : ce n'est **pas un conseil en investissement**. Les cours sont différés, les données peuvent être incomplètes ou erronées et les calculs (VaR, valorisations, grecques…) reposent sur des hypothèses simplificatrices. Ne prenez pas de décision financière sur cette seule base.
+
+Le terminal interroge des sources publiques depuis votre poste, avec vos propres clés. Certaines, comme Yahoo Finance (API non officielle), ont des conditions d'utilisation qui limitent l'usage à un cadre personnel et interdisent la redistribution des données : chaque utilisateur est responsable du respect des conditions des sources qu'il interroge. Le dépôt ne contient et ne redistribue aucune donnée de marché.
+
+Projet indépendant, sans lien avec Bloomberg L.P., Refinitiv ou un autre fournisseur de terminaux : les codes de fonction (`DES`, `GP`, `OMON`…) reprennent des conventions de place répandues. Les noms de marques cités appartiennent à leurs propriétaires.
+
+## Licence
+
+[MIT](LICENSE). Les bibliothèques utilisées gardent leur propre licence (notamment TradingView Lightweight Charts, Apache 2.0, dont le logo reste affiché sur les graphiques).
