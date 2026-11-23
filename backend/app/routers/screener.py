@@ -15,8 +15,10 @@ from fastapi import APIRouter, HTTPException
 from ..cache import _read, _envelope, cached
 from ..providers import universe
 from ..providers.registry import fx, prices
+from ..providers.yahoo_profile import YahooProfile
 
 router = APIRouter(prefix="/api/screener", tags=["actions"])
+profiles = YahooProfile()
 _progress: dict[str, dict] = {}
 _lock = threading.Lock()
 
@@ -124,6 +126,19 @@ def screener(universe_id: str = "sp500"):
                      "details": {"fetched_at": det["fetched_at"] if det else None, **_progress.get(universe_id, {})},
                      "members_source": mem["source"], "members_fetched_at": mem["fetched_at"]},
             "source": perf["source"], "fetched_at": perf["fetched_at"], "stale": perf["stale"] or mem["stale"], "error": perf["error"] or mem["error"]}
+
+
+def classify(symbol: str, typ: str | None = "EQUITY") -> dict | None:
+    """Secteur et pays du siège. Actions : profil Yahoo de la société (une seule classification quelle que soit la
+    cotation : ASML au Nasdaq → Pays-Bas), à défaut l'univers du screener s'il contient ce symbole."""
+    if typ == "EQUITY":
+        try:  # un profil indisponible ne doit pas bloquer l'appelant
+            p = cached(f"profile:{symbol.upper()}", 30 * 86400, profiles.name, lambda: profiles.profile(symbol))["data"]
+            if p.get("sector") or p.get("country"):
+                return p
+        except Exception:
+            pass
+    return lookup(symbol)
 
 
 def lookup(symbol: str) -> dict | None:

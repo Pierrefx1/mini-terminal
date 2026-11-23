@@ -9,7 +9,7 @@ import { useApi } from "@/lib/api";
 import { big, num, pct, price, tone } from "@/lib/format";
 
 type Table = { dates: string[]; rows: Record<string, (number | null)[]> };
-type FA = { symbol: string; currency: string; sector?: string; annual: { income: Table; balance: Table; cashflow: Table }; quarterly: { income: Table; balance: Table; cashflow: Table };
+type FA = { symbol: string; currency: string; sector?: string; country?: string; annual: { income: Table; balance: Table; cashflow: Table }; quarterly: { income: Table; balance: Table; cashflow: Table };
   valuation: Record<string, number | null>; valuation_date: string | null; ttm: Record<string, number | null>; ratios: Record<string, number | null> };
 type Comp = Record<string, any>;
 const PEERS: Record<string, string> = { AAPL: "MSFT,GOOGL,AMZN,META", MSFT: "AAPL,GOOGL,ORCL,CRM", "MC.PA": "RMS.PA,KER.PA,CFR.SW,OR.PA" };
@@ -170,7 +170,7 @@ export default function FAPage() {
       <Panel className="col-span-12" title={<span className="normal-case tracking-normal">FA · analyse fondamentale <form className="ml-2 inline" onSubmit={(e) => { e.preventDefault(); if (input.trim()) router.push(`/fa?s=${encodeURIComponent(input.trim().toUpperCase())}`); }}>
         <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Symbole (AAPL, MC.PA…)" className="w-40 uppercase" /></form>
         {quote && !("error" in quote) && <span className="ml-3 text-fg">{quote.name} {price(quote.price)} <span className={tone(quote.change_pct)}>{pct(quote.change_pct)}</span></span>}
-        {d?.sector && <span className="ml-2 text-dim">{d.sector}</span>}</span>}
+        {(d?.sector || d?.country) && <span className="ml-2 text-dim">{[d.sector, d.country].filter(Boolean).join(" · ")}</span>}</span>}
         right={<>{s && <><Link href={`/des?s=${encodeURIComponent(s)}`} className="border border-line px-1 text-info">DES</Link><Link href={`/graphique?s=${encodeURIComponent(s)}`} className="border border-line px-1 text-info">GP</Link><Link href={`/dcf?s=${encodeURIComponent(s)}`} className="border border-line px-1 text-info">DCF</Link><Link href={`/research?s=${encodeURIComponent(s)}`} className="border border-line px-1 text-info">RES</Link></>}<SourceTag env={fa.env} /></>}>
         {!s && <div className="p-2 text-dim">Saisir un symbole d&apos;action, ou taper <span className="text-amber">AAPL US Equity FA</span> dans la barre de commandes.</div>}
         <State loading={fa.loading && !d} error={fa.error} />

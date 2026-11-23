@@ -73,8 +73,9 @@ def fundamentals(symbol: str) -> dict:
 def fa(symbol: str):
     def fetch():
         out = fundamentals(symbol)
-        meta = screener.lookup(symbol)
+        meta = screener.classify(symbol)
         out["sector"] = meta.get("sector") if meta else None
+        out["country"] = meta.get("country") if meta else None
         return out
     return cached(f"fa:{symbol.upper()}", 12 * 3600, "Yahoo Finance (états publiés)", fetch, status=HISTORICAL)
 
