@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import EChart, { lineOption, PALETTE } from "@/components/EChart";
 import Export from "@/components/Export";
+import SymbolInput from "@/components/SymbolInput";
 import { Num, Out, Panel, SourceTag, State } from "@/components/ui";
 import { useApi, usePostApi } from "@/lib/api";
 import { big, num, pct, price, tone } from "@/lib/format";
@@ -49,6 +50,7 @@ export default function Port() {
   if (!draft) return <State loading />;
   const tot = draft.holdings.reduce((s, h) => s + (h.weight || 0), 0);
   const set = (p: Partial<Portfolio>) => setDraft({ ...draft, ...p });
+  const setSym = (i: number, symbol: string) => set({ holdings: draft.holdings.map((x, j) => (j === i ? { ...x, symbol } : x)) });
   const apply = () => { save(draft); setApplied(draft); };
   const perf = d?.performance;
   return (
@@ -59,7 +61,7 @@ export default function Port() {
         {list.length > 1 && <button onClick={() => { if (confirm(`Supprimer « ${draft.name} » ?`)) { remove(draft.id); setCurrentId(list.find((p) => p.id !== draft.id)!.id); } }} className="border border-line px-1 text-down">supprimer</button>}</>}>
         <div className="px-2 py-1">
           <label className="flex justify-between py-0.5"><span className="text-dim">Nom</span><input value={draft.name} onChange={(e) => set({ name: e.target.value })} className="w-48" /></label>
-          <label className="flex justify-between py-0.5"><span className="text-dim">Indice de référence</span><input value={draft.benchmark} onChange={(e) => set({ benchmark: e.target.value.toUpperCase() })} className="w-24 uppercase" /></label>
+          <label className="flex justify-between py-0.5"><span className="text-dim">Indice de référence</span><SymbolInput value={draft.benchmark} onChange={(v) => set({ benchmark: v.toUpperCase() })} onPick={(s) => set({ benchmark: s })} className="w-24 uppercase" /></label>
           <label className="flex justify-between py-0.5"><span className="text-dim">Devise de base</span><select value={draft.base} onChange={(e) => set({ base: e.target.value as Portfolio["base"] })}>{["EUR", "USD", "GBP", "CHF", "JPY"].map((c) => <option key={c}>{c}</option>)}</select></label>
           <Num label="Historique" value={draft.years} onChange={(v) => set({ years: Math.max(1, Math.min(10, Math.round(v))) })} step={1} suffix="ans" />
           <label className="flex justify-between py-0.5"><span className="text-dim">Rééquilibrage</span><select value={draft.rebalance} onChange={(e) => set({ rebalance: +e.target.value })}>
@@ -69,14 +71,14 @@ export default function Port() {
         </div>
         <table><thead><tr><th>Instrument</th><th className="num">Poids</th><th className="num">Normalisé</th><th /></tr></thead>
           <tbody>{draft.holdings.map((h, i) => <tr key={i}>
-            <td><input value={h.symbol} onChange={(e) => set({ holdings: draft.holdings.map((x, j) => (j === i ? { ...x, symbol: e.target.value.toUpperCase() } : x)) })} className="w-28 uppercase" /></td>
+            <td><SymbolInput value={h.symbol} onChange={(v) => setSym(i, v.toUpperCase())} onPick={(s) => setSym(i, s)} className="w-28 uppercase" placeholder="symbole ou nom" ariaLabel="Instrument" /></td>
             <td className="num"><input type="number" value={h.weight} onChange={(e) => set({ holdings: draft.holdings.map((x, j) => (j === i ? { ...x, weight: +e.target.value } : x)) })} className="w-20 text-right" /></td>
             <td className="num text-dim">{tot ? num(h.weight / tot * 100, 1) : "–"} %</td>
             <td><button onClick={() => set({ holdings: draft.holdings.filter((_, j) => j !== i) })} className="text-down">×</button></td></tr>)}</tbody></table>
         <div className="flex gap-2 px-2 py-1">
           <button onClick={() => set({ holdings: [...draft.holdings, { symbol: "", weight: 10 }] })} className="border border-line px-2 text-info">+ instrument</button>
           <button onClick={apply} className="bg-amber px-3 font-bold text-black">Analyser</button>        </div>
-        <div className="px-2 pb-1 text-[10px] text-dim">Symboles de la source de cotation (AAPL, MC.PA, TLT, GC=F…). Poids relatifs, normalisés à 100 %. Portefeuilles enregistrés dans ce navigateur.</div>
+        <div className="px-2 pb-1 text-[10px] text-dim">Symboles de la source de cotation (AAPL, MC.PA, TLT, GC=F…) : tape un nom de société pour voir les suggestions. Poids relatifs, normalisés à 100 %. Portefeuilles enregistrés dans ce navigateur.</div>
       </Panel>
       <Panel className="col-span-12 lg:col-span-8" title={`Performance ${d ? `du ${d.start} au ${d.end} en ${d.base}` : ""}`} right={<><Link href="/risk" className="text-info">RISK →</Link><SourceTag env={a.env} /></>}>
         <State loading={a.loading && !d} error={a.error} />

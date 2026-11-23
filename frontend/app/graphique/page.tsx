@@ -1,6 +1,7 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import SymbolInput from "@/components/SymbolInput";
 import PriceChart, { IND_COLORS, type ChartOpts, type History } from "@/components/PriceChart";
 import { Panel, Seg, SourceTag, State, Toggle } from "@/components/ui";
 import { send, useApi } from "@/lib/api";
@@ -76,10 +77,9 @@ export default function Graphique() {
   const pickPeriod = (p: string) => { setPeriod(p); if (!ALLOWED[interval].includes(p)) setIntervalV(PERIODS[p].interval); };
   const pickInterval = (i: string) => { setIntervalV(i); if (!ALLOWED[i].includes(period)) setPeriod(ALLOWED[i].at(-1)!); };
   const toggleWl = async () => { await send(inWl ? "DELETE" : "PUT", `/api/market/watchlist/${encodeURIComponent(symbol)}`); wl.reload(); };
-  const goSymbol = (e: React.FormEvent) => { e.preventDefault(); const s = symInput.trim().toUpperCase(); if (s) router.push(`/graphique?s=${encodeURIComponent(s)}`); setSymInput(""); };
-  const addCompare = (e: React.FormEvent) => {
-    e.preventDefault();
-    const s = cmpInput.trim().toUpperCase();
+  const openSymbol = (raw: string) => { const s = raw.trim().toUpperCase(); if (s) router.push(`/graphique?s=${encodeURIComponent(s)}`); setSymInput(""); };
+  const addCompare = (raw: string) => {
+    const s = raw.trim().toUpperCase();
     if (s && s !== symbol.toUpperCase() && !compare.includes(s) && compare.length < 5) setCompare([...compare, s]);
     setCmpInput("");
   };
@@ -133,8 +133,9 @@ export default function Graphique() {
           </div>
           {tools && (<>
             <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-2 py-1">
-              <form onSubmit={goSymbol}>
-                <input value={symInput} onChange={(e) => setSymInput(e.target.value)} placeholder="Symbole… ↵" className="w-28" title="Tape un symbole Yahoo (AAPL, ^FCHI, EURUSD=X, BTC-USD…) puis Entrée" aria-label="Ouvrir un symbole" />
+              <form onSubmit={(e) => { e.preventDefault(); openSymbol(symInput); }}>
+                <SymbolInput value={symInput} onChange={setSymInput} onPick={openSymbol} placeholder="Symbole ou nom… ↵" className="w-36"
+                  title="Symbole Yahoo (AAPL, ^FCHI, EURUSD=X…) ou nom de société : choisis une suggestion" ariaLabel="Ouvrir un symbole" />
               </form>
               <Group label="Style">
                 <Seg value={opts.type} options={[["candles", "Bougies"], ["bars", "Barres"], ["line", "Ligne"]]} onChange={(v) => setOpts((o) => ({ ...o, type: v as ChartOpts["type"] }))} />
@@ -145,8 +146,9 @@ export default function Graphique() {
                 <span title="Volumes échangés en bas du graphique"><Toggle on={opts.volume} onChange={set("volume")}>Volume</Toggle></span>
               </span>
               <span className="flex items-center gap-1">
-                <form onSubmit={addCompare}>
-                  <input value={cmpInput} onChange={(e) => setCmpInput(e.target.value)} placeholder="Comparer à… ↵" className="w-32" title="Ajoute jusqu'à 5 symboles, affichés en % de variation" aria-label="Ajouter un symbole à comparer" />
+                <form onSubmit={(e) => { e.preventDefault(); addCompare(cmpInput); }}>
+                  <SymbolInput value={cmpInput} onChange={setCmpInput} onPick={addCompare} placeholder="Comparer à… ↵" className="w-32"
+                    title="Ajoute jusqu'à 5 symboles, affichés en % de variation" ariaLabel="Ajouter un symbole à comparer" />
                 </form>
                 {compare.map((c) => <button key={c} onClick={() => setCompare(compare.filter((x) => x !== c))} className="border border-line px-1 text-info hover:text-down" title="Retirer">{c} ×</button>)}
               </span>
