@@ -106,30 +106,36 @@ export default function Risk() {
           <div className="h-64">{hist && <EChart option={hist} />}</div>
           <div className="px-2 text-[10px] text-dim">Orange : au-delà de la VaR 95 % ; rouge : au-delà de la VaR 99 %.</div>
         </Panel>
-        <Panel className="col-span-12 xl:col-span-4" title="Sensibilités factorielles (taux, devises, matières)">
-          <table><thead><tr><th>Facteur (proxy)</th><th className="num">Bêta</th><th>Lecture</th></tr></thead>
-            <tbody>{d.factors.map((f) => <tr key={f.symbol}><td>{f.name} <span className="text-dim">{f.symbol}</span></td><td className={`num ${tone(f.beta)}`}>{num(f.beta, 2)}</td>
-              <td className="text-dim">{f.beta == null ? "–" : `${f.beta > 0 ? "gagne" : "perd"} ${num(Math.abs(f.beta), 2)} % pour +1 % du facteur`}</td></tr>)}</tbody></table>
-          <div className="px-2 py-1 text-[10px] text-dim">Régression multiple des rendements quotidiens du portefeuille (en {d.base}) sur les cinq facteurs, deux dernières années. Sensibilité aux taux : via les obligations longues (TLT) ; aux devises : via l&apos;indice dollar (UUP).</div>
+        <Panel className="col-span-12 xl:col-span-4" title="Corrélations des lignes (un an)">
+          <div className="h-full min-h-72">{corr && <EChart option={corr} />}</div>
         </Panel>
-        <Panel className="col-span-12 lg:col-span-6" title="Stress tests" right={<Export name="stress-tests" columns={["Scénario", "Impact %"]} rows={[...d.historical_scenarios.map((s) => [s.name, s.pnl_pct]), ...d.factor_scenarios.map((s) => [s.name, s.pnl_pct])]} source={a.env?.source} />}>
-          <table><thead><tr><th>Scénario historique</th><th>Période</th><th className="num">Portefeuille</th><th className="num">Référence</th><th className="num">en {d.base}</th></tr></thead>
-            <tbody>{d.historical_scenarios.map((s) => <tr key={s.name}><td>{s.name}</td><td className="text-dim">{s.start} → {s.end}</td>
+        <Panel className="col-span-12 lg:col-span-5" title="Stress tests" right={<Export name="stress-tests" columns={["Scénario", "Impact %"]} rows={[...d.historical_scenarios.map((s) => [s.name, s.pnl_pct]), ...d.factor_scenarios.map((s) => [s.name, s.pnl_pct])]} source={a.env?.source} />}>
+          <table><thead><tr><th>Scénario historique</th><th className="num">Portefeuille</th><th className="num">Référence</th><th className="num">en {d.base}</th></tr></thead>
+            <tbody>{d.historical_scenarios.map((s) => <tr key={s.name}><td className="whitespace-normal">{s.name}<div className="text-[10px] text-dim">{s.start} → {s.end}</div></td>
               {s.pnl_pct == null ? <td colSpan={3} className="text-dim">{s.note}</td> : <><td className={`num ${tone(s.pnl_pct)}`}>{pct(s.pnl_pct)}</td><td className={`num ${tone(s.bench_pct)}`}>{pct(s.bench_pct)}</td><td className={`num ${tone(s.pnl_pct)}`}>{big(s.pnl_pct / 100 * cap)}</td></>}</tr>)}</tbody></table>
           <table><thead><tr><th>Scénario hypothétique (factoriel)</th><th className="num">Impact</th><th className="num">en {d.base}</th></tr></thead>
-            <tbody>{d.factor_scenarios.map((s) => <tr key={s.name}><td>{s.name}</td><td className={`num ${tone(s.pnl_pct)}`}>{pct(s.pnl_pct)}</td><td className={`num ${tone(s.pnl_pct)}`}>{s.pnl_pct == null ? "–" : big(s.pnl_pct / 100 * cap)}</td></tr>)}</tbody></table>
+            <tbody>{d.factor_scenarios.map((s) => <tr key={s.name}><td className="whitespace-normal">{s.name}</td><td className={`num ${tone(s.pnl_pct)}`}>{pct(s.pnl_pct)}</td><td className={`num ${tone(s.pnl_pct)}`}>{s.pnl_pct == null ? "–" : big(s.pnl_pct / 100 * cap)}</td></tr>)}</tbody></table>
           <div className="px-2 py-1 text-[10px] text-dim">Historiques : portefeuille actuel rejoué sur la période (poids cibles). Hypothétiques : bêtas factoriels × choc ; approximation linéaire.</div>
         </Panel>
+        <div className="col-span-12 flex flex-col gap-1 lg:col-span-7">
+          <Panel className="flex-auto" title="Attribution du risque (un an)">
+            <table><thead><tr><th>Ligne</th><th className="num">Poids</th><th className="num">Volatilité</th><th className="num">Part du risque</th><th className="num">Risque / poids</th></tr></thead>
+              <tbody>{d.lines.slice().sort((x, y) => y.risk_contribution_pct - x.risk_contribution_pct).map((l) => <tr key={l.symbol}><td className="text-amber">{l.symbol}</td><td className="num">{num(l.current * 100, 1)} %</td><td className="num">{num(l.vol_pct, 1)} %</td>
+                <td className="num">{num(l.risk_contribution_pct, 1)} %</td><td className={`num ${l.risk_contribution_pct / (l.current * 100) > 1.5 ? "text-amber" : ""}`}>{num(l.risk_contribution_pct / (l.current * 100), 2)}x</td></tr>)}</tbody></table>
+            <div className="px-2 py-1 text-[10px] text-dim">Part du risque : contribution de la ligne à la variance du portefeuille. Risque / poids au-dessus de 1,5x (en orange) : ligne qui pèse plus dans le risque que dans l&apos;allocation.</div>
+          </Panel>
+          <Panel className="flex-auto" title="Sensibilités factorielles (taux, devises, matières)">
+            <table><thead><tr><th>Facteur (proxy)</th><th className="num">Bêta</th><th>Lecture</th></tr></thead>
+              <tbody>{d.factors.map((f) => <tr key={f.symbol}><td>{f.name} <span className="text-dim">{f.symbol}</span></td><td className={`num ${tone(f.beta)}`}>{num(f.beta, 2)}</td>
+                <td className="text-dim">{f.beta == null ? "–" : `${f.beta > 0 ? "gagne" : "perd"} ${num(Math.abs(f.beta), 2)} % pour +1 % du facteur`}</td></tr>)}</tbody></table>
+            <div className="px-2 py-1 text-[10px] text-dim">Régression multiple des rendements quotidiens du portefeuille (en {d.base}) sur les cinq facteurs, deux dernières années. Sensibilité aux taux : via les obligations longues (TLT) ; aux devises : via l&apos;indice dollar (UUP).</div>
+          </Panel>
+        </div>
         <Panel className="col-span-12" title="Scénario personnalisé : chocs de facteurs">
           <CustomScenario factors={d.factors} cap={cap} base={d.base} />
           <div className="px-2 pb-1 text-[10px] text-dim">Approximation linéaire : impact = Σ bêta × choc, avec les bêtas de la régression multiple sur deux ans. Ne capture ni la convexité (options), ni les changements de corrélation en crise : à compléter par les scénarios historiques.</div>
         </Panel>
-        <Panel className="col-span-12 lg:col-span-6" title="Attribution du risque et corrélations (un an)">
-          <table><thead><tr><th>Ligne</th><th className="num">Poids</th><th className="num">Volatilité</th><th className="num">Part du risque</th><th className="num">Risque / poids</th></tr></thead>
-            <tbody>{d.lines.slice().sort((x, y) => y.risk_contribution_pct - x.risk_contribution_pct).map((l) => <tr key={l.symbol}><td className="text-amber">{l.symbol}</td><td className="num">{num(l.current * 100, 1)} %</td><td className="num">{num(l.vol_pct, 1)} %</td>
-              <td className="num">{num(l.risk_contribution_pct, 1)} %</td><td className={`num ${l.risk_contribution_pct / (l.current * 100) > 1.5 ? "text-amber" : ""}`}>{num(l.risk_contribution_pct / (l.current * 100), 2)}x</td></tr>)}</tbody></table>
-          <div className="h-72">{corr && <EChart option={corr} />}</div>
-        </Panel>
+
       </>}
     </div>
   );
