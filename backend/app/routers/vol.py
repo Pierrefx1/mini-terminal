@@ -6,7 +6,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import numpy as np
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from .. import config, db  # noqa: F401  (config charge .env)
 from .. import vol_surface as vs
@@ -64,6 +64,29 @@ def surface(
 ):
     cfg = vs.Config(rate=rate, min_open_interest=min_open_interest, max_rel_spread=max_rel_spread, k_range=k_range)
     return get_surface(symbol.strip().upper(), cfg, force)
+
+
+@router.get("/vol/iv")
+def iv(
+    symbol: str = Query("SPY", min_length=1, max_length=15),
+    T: float = Query(..., gt=0, le=5),
+    strikes: str = Query(..., min_length=1, max_length=400),
+):
+    """Vol implicite de marché pour une liste de strikes à la maturité T (années), lue sur la surface VOL par défaut.
+    Sert à OVME : chaque jambe d'une stratégie est valorisée à la vol de son strike (smile), avec le portage implicite."""
+    try:
+        ks = [float(x) for x in strikes.split(",") if x.strip()][:20]
+    except ValueError:
+        raise HTTPException(400, "Strikes invalides")
+    if not ks or any(k <= 0 for k in ks):
+        raise HTTPException(400, "Strikes invalides")
+    env = get_surface(symbol.strip().upper(), vs.Config())
+    d = env["data"]
+    try:
+        out = vs.lookup(d["points"], d["spot"], ks, T)
+    except vs.VolSurfaceError as e:
+        raise HTTPException(502, detail={"source": SOURCE, "error": str(e)})
+    return {**env, "data": {"symbol": d["ticker"], "rate": d["config"]["rate"], **out}}
 
 
 def _rv(symbol: str) -> dict:

@@ -11,7 +11,11 @@ class Eurostat:
     def fetch(self, dataset: str, filters: dict, geos: list[str], since: str = "2005") -> dict:
         """{geo: [[période, valeur], ...]} ; période au format Eurostat (2026-10, 2026-Q3)."""
         params = [(k, v) for k, v in filters.items()] + [("geo", g) for g in geos] + [("sinceTimePeriod", since), ("format", "JSON")]
-        d = get(f"{BASE}/{dataset}", params=params, timeout=60).json()
+        r = get(f"{BASE}/{dataset}", params=params, timeout=60)
+        try:
+            d = r.json()
+        except ValueError:  # page d'indisponibilité HTML (redirection vers sorry.ec.europa.eu)
+            raise RuntimeError(f"Eurostat indisponible (réponse non JSON depuis {r.url.host})") from None
         if "error" in d or "value" not in d:
             raise SourceError(f"Eurostat {dataset} : {str(d.get('error', d))[:160]}")
         ids, sizes = d["id"], d["size"]

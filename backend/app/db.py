@@ -25,6 +25,18 @@ CREATE TABLE IF NOT EXISTS vol_history (
   ticker TEXT NOT NULL, date TEXT NOT NULL, spot REAL, atm30 REAL, skew30 REAL, fly30 REAL, atm90 REAL, skew90 REAL,
   n_points INTEGER, updated_at TEXT NOT NULL, PRIMARY KEY (ticker, date)
 );
+-- GDELT : quarts d'heure traités (n = -1 : fichier jamais publié), agrégats par pays, événements marquants
+CREATE TABLE IF NOT EXISTS gdelt_slots (slot TEXT PRIMARY KEY, n INTEGER NOT NULL, fetched_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS gdelt_country (
+  slot TEXT NOT NULL, iso TEXT NOT NULL, events INTEGER NOT NULL, conflict INTEGER NOT NULL, material INTEGER NOT NULL,
+  articles INTEGER NOT NULL, tone_sum REAL NOT NULL, PRIMARY KEY (slot, iso)
+);
+CREATE TABLE IF NOT EXISTS gdelt_events (
+  id TEXT PRIMARY KEY, slot TEXT NOT NULL, iso TEXT NOT NULL, root TEXT NOT NULL, quad INTEGER NOT NULL, goldstein REAL NOT NULL,
+  articles INTEGER NOT NULL, tone REAL NOT NULL, place TEXT NOT NULL, precise INTEGER NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL,
+  actor1 TEXT NOT NULL, actor2 TEXT NOT NULL, url TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS gdelt_events_slot ON gdelt_events(slot);
 -- État de chaque source de données : dernier succès, dernière erreur, compteurs (alimenté par cache.cached)
 CREATE TABLE IF NOT EXISTS source_health (
   source TEXT PRIMARY KEY, last_ok TEXT, last_error_at TEXT, last_error TEXT,
@@ -49,3 +61,17 @@ def conn():
 def init():
     with conn() as c:
         c.executescript(SCHEMA)
+        # migrations légères : colonnes ajoutées après la création des bases existantes
+        cols = {r["name"] for r in c.execute("PRAGMA table_info(news)")}
+        if "image" not in cols:
+            c.execute("ALTER TABLE news ADD COLUMN image TEXT NOT NULL DEFAULT ''")
+        cols = {r["name"] for r in c.execute("PRAGMA table_info(source_health)")}
+        if "streak" not in cols:  # échecs consécutifs et début de la panne en cours (bandeau d'alerte)
+            c.execute("ALTER TABLE source_health ADD COLUMN streak INTEGER NOT NULL DEFAULT 0")
+            c.execute("ALTER TABLE source_health ADD COLUMN down_since TEXT")
+            # bases existantes : une source jamais en succès a échoué à chaque appel ; sinon au moins le dernier
+            c.execute("UPDATE source_health SET streak = CASE WHEN last_ok IS NULL THEN err_count ELSE 1 END "
+                      "WHERE last_error_at IS NOT NULL AND (last_ok IS NULL OR last_error_at > last_ok)")
+        cols = {r["name"] for r in c.execute("PRAGMA table_info(calendar_events)")}
+        if "actual" not in cols:  # chiffre publié, rapproché depuis Nasdaq (ForexFactory ne le donne pas)
+            c.execute("ALTER TABLE calendar_events ADD COLUMN actual TEXT NOT NULL DEFAULT ''")

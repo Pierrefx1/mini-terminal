@@ -22,9 +22,11 @@ function merge(a: any, b: any): any {
 }
 
 /** Graphique Plotly (chargé côté navigateur uniquement), redimensionné avec son panneau. */
-export default function Plot({ data, layout, className = "h-full w-full" }: { data: any[]; layout?: any; className?: string }) {
+export default function Plot({ data, layout, className = "h-full w-full", onClick }: { data: any[]; layout?: any; className?: string; onClick?: (point: any) => void }) {
   const el = useRef<HTMLDivElement>(null);
   const lib = useRef<any>(null);
+  const cb = useRef(onClick);
+  cb.current = onClick;
   useEffect(() => {
     let alive = true;
     const node = el.current;
@@ -32,7 +34,11 @@ export default function Plot({ data, layout, className = "h-full w-full" }: { da
     import("plotly.js-dist-min").then((m) => {
       if (!alive) return;
       lib.current = m.default ?? m;
-      lib.current.react(node, data, merge(PLOT_LAYOUT, { ...layout, autosize: true }), { displaylogo: false, responsive: true, modeBarButtonsToRemove: ["toImage", "sendDataToCloud"] });
+      lib.current.react(node, data, merge(PLOT_LAYOUT, { ...layout, autosize: true }), { displaylogo: false, responsive: true, modeBarButtonsToRemove: ["toImage", "sendDataToCloud"] })
+        .then(() => {
+          const n = node as any;
+          if (!n.__mtClick && n.on) { n.on("plotly_click", (e: any) => e?.points?.[0] && cb.current?.(e.points[0])); n.__mtClick = true; }
+        });
     });
     return () => { alive = false; };
   }, [data, layout]);

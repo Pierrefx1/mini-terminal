@@ -6,8 +6,9 @@ from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException
 
-from .. import config
+from .. import config, sec
 from ..cache import DELAYED, HISTORICAL, SourceError, cached
+from ..providers import sec as sec_provider
 from ..providers.registry import macro, options, prices
 from . import screener
 
@@ -72,10 +73,60 @@ def fundamentals(symbol: str) -> dict:
 def fa(symbol: str):
     def fetch():
         out = fundamentals(symbol)
-        meta = screener.lookup(symbol)
+        meta = screener.classify(symbol)
         out["sector"] = meta.get("sector") if meta else None
+        out["country"] = meta.get("country") if meta else None
         return out
     return cached(f"fa:{symbol.upper()}", 12 * 3600, "Yahoo Finance (états publiés)", fetch, status=HISTORICAL)
+
+
+def _sec_cik(symbol: str) -> int:
+    env = cached("sec:tickers", 7 * 86400, "SEC EDGAR", sec_provider.ticker_map, status=HISTORICAL)
+    cik = env["data"].get(symbol) or env["data"].get(symbol.replace(".", "-"))
+    if not cik:
+        raise SourceError(f"SEC : « {symbol} » ne dépose pas de 10-K (société non américaine, ETF ou indice)")
+    return cik
+
+
+def ratio_history(t: dict) -> dict[str, list]:
+    """Ratios par exercice sur l'historique long (mêmes définitions que `ratios`, capitaux moyens sur deux clôtures)."""
+    inc, bal, cf = t["income"]["rows"], t["balance"]["rows"], t["cashflow"]["rows"]
+    n = len(t["income"]["dates"])
+    pct = lambda a, b: a / b * 100 if a is not None and b else None  # noqa: E731
+    avg = lambda s, i: (s[i] + s[i - 1]) / 2 if i and s[i] is not None and s[i - 1] is not None else s[i]  # noqa: E731
+    out: dict[str, list] = {k: [] for k in ("gross_margin", "operating_margin", "net_margin", "fcf_margin", "roe", "roic", "revenue_growth", "net_debt_ebitda")}
+    for i in range(n):
+        rev = inc["TotalRevenue"][i]
+        tax = inc["TaxRateForCalcs"][i]
+        op = inc["OperatingIncome"][i]
+        nopat = op * (1 - (tax if tax is not None and 0 <= tax < 0.6 else 0.21)) if op is not None else None
+        out["gross_margin"].append(pct(inc["GrossProfit"][i], rev))
+        out["operating_margin"].append(pct(op, rev))
+        out["net_margin"].append(pct(inc["NetIncome"][i], rev))
+        out["fcf_margin"].append(pct(cf["FreeCashFlow"][i], rev))
+        out["roe"].append(pct(inc["NetIncome"][i], avg(bal["StockholdersEquity"], i)))
+        out["roic"].append(pct(nopat, avg(bal["InvestedCapital"], i)))
+        prev = inc["TotalRevenue"][i - 1] if i else None
+        out["revenue_growth"].append((rev / prev - 1) * 100 if rev and prev else None)
+        nd, e = bal["NetDebt"][i], inc["EBITDA"][i]
+        out["net_debt_ebitda"].append(nd / e if nd is not None and e else None)
+    return out
+
+
+@router.get("/equities/fa/sec")
+def fa_sec(symbol: str, years: int = 15):
+    """États annuels longs (jusqu'à 15 exercices) issus des 10-K déposés à la SEC (XBRL), ratios recalculés par exercice."""
+    sym = symbol.strip().upper()
+    years = max(3, min(years, 20))
+
+    def fetch():
+        facts = sec_provider.company_facts(_sec_cik(sym))
+        try:
+            t = sec.build(facts, years)
+        except ValueError as e:
+            raise SourceError(f"SEC : {sym} : {e}") from e
+        return {"symbol": sym, "currency": "USD", **t, "ratios": ratio_history(t)}
+    return cached(f"fa-sec:{sym}:{years}", 24 * 3600, "SEC EDGAR (10-K, XBRL)", fetch, status=HISTORICAL)
 
 
 @router.get("/equities/comps")
@@ -211,16 +262,7 @@ def impact(release: str = "cpi", years: int = 5):
 def central_banks():
     from ..providers.registry import policy
     env = cached("policy", 6 * 3600, policy.name, policy.policy_rates)
-    banks = [{**{k: b[k] for k in ("area", "bank", "rate", "date", "last_change", "previous")}, "history": b["steps"][-15:]} for b in env["data"]["banks"]]
+    banks = [{**{k: b[k] for k in ("area", "bank", "rate", "date", "last_change", "previous")}, "history": [s for s in b["steps"] if s[0] >= "2015-01-01"]} for b in env["data"]["banks"]]
     return {**env, "data": banks, "status": HISTORICAL}
 
 
-@router.get("/market/bidask")
-def bid_ask(symbol: str):
-    """Meilleure offre et demande différées (CBOE, actions et ETF américains) pour l'exécution simulée."""
-    def fetch():
-        q = options.quote(symbol)
-        if not q.get("bid") or not q.get("ask"):
-            raise SourceError(f"CBOE : pas de fourchette affichée pour « {symbol} »")
-        return q
-    return cached(f"bidask:{symbol.upper()}", 30, "CBOE (différé)", fetch, status=DELAYED)

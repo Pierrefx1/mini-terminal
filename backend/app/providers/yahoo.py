@@ -10,7 +10,7 @@ from .http import get
 
 BASE = "https://query1.finance.yahoo.com"
 # intervalle -> plage maximale servie par Yahoo
-MAX_RANGE = {"1m": "5d", "5m": "1mo", "15m": "1mo", "30m": "1mo", "60m": "2y",
+MAX_RANGE = {"1m": "7d", "5m": "60d", "15m": "60d", "30m": "60d", "60m": "2y",
              "1d": "max", "1wk": "max", "1mo": "max"}
 
 

@@ -144,7 +144,8 @@ def analyze(req: Request):
                          "bench_pct": (full[i1, -1] / full[i0, -1] - 1) * 100})
 
     mc = risk.monte_carlo(a_rets[-504:], cur_w, horizon=10, paths=10_000)
-    meta = [screener.lookup(s) for s in syms]
+    with ThreadPoolExecutor(6) as ex:
+        meta = list(ex.map(lambda i: screener.classify(syms[i], loaded[i][1].get("type")), range(len(syms))))
     lines = []
     for i, s in enumerate(syms):
         m, d = meta[i], loaded[i][1]

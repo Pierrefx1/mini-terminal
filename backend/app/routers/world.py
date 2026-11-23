@@ -1,16 +1,19 @@
 """WORLD MONITOR (commande WM) : globe des risques, publications et places financières.
 
-/api/world/monitor : marqueurs (actualités géolocalisées, calendrier, places et mouvements de marché), bandeau de marchés, fil d'actualités.
+/api/world/monitor : marqueurs (actualités géolocalisées et regroupées par sujet, événements GDELT, calendrier avec résultats,
+                     places et mouvements de marché), points chauds et actifs exposés, statistiques GDELT par pays,
+                     bandeau de marchés, fil d'actualités.
 /api/world/links   : arcs entre places (corrélation des indices sur 60 séances) et corridors énergétiques / commerciaux de référence.
 """
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter
 
-from .. import db
+from .. import db, geo_risk
 from .. import world as w
 from ..cache import DELAYED, HISTORICAL, cached
-from ..providers import rss
+from ..providers import gdelt, rss
+from ..providers.nasdaq_calendar import num
 from ..providers.registry import prices
 
 router = APIRouter(prefix="/api/world", tags=["world"])
@@ -29,6 +32,8 @@ BAR = [("^GSPC", "S&P 500"), ("^IXIC", "Nasdaq"), ("^STOXX50E", "Euro Stoxx 50")
        ("^HSI", "Hang Seng"), ("^VIX", "VIX"), ("^TNX", "US 10A"), ("DX-Y.NYB", "DXY"), ("EURUSD=X", "EUR/USD"), ("USDJPY=X", "USD/JPY"),
        ("BZ=F", "Brent"), ("NG=F", "Gaz US"), ("GC=F", "Or"), ("HG=F", "Cuivre"), ("BTC-USD", "Bitcoin")]
 BIG_MOVE = 2.0  # variation d'indice (%) signalée comme événement
+ANOMALY = 1.5   # pays « en hausse » : au moins 1,5 fois sa présence habituelle dans les conflits recensés…
+ANOMALY_MIN = 20  # … et au moins 20 événements de conflit sur 24 h (en deçà, le rapport n'est pas significatif)
 
 
 def _world_news() -> tuple[list[dict], list[str], list[str]]:
@@ -53,7 +58,7 @@ def _econ_news(hours: int = 48) -> list[dict]:
 
 
 def _quotes() -> dict:
-    syms = list(dict.fromkeys([s for s, _ in BAR] + [c[6] for c in w.CENTERS]))
+    syms = list(dict.fromkeys([s for s, _ in BAR] + [c[6] for c in w.CENTERS] + w.ZONE_SYMBOLS))
     return cached("world:quotes", 120, prices.name, lambda: prices.quotes(syms), status=DELAYED)
 
 
@@ -71,10 +76,12 @@ def monitor():
     now = datetime.now(timezone.utc)
     markers, news = [], []
 
-    # 1. Actualités internationales et économiques géolocalisées
+    # 1. Actualités internationales (regroupées par sujet : un événement repris par 6 médias compte une fois) et économiques
     world_items, failed, times = _world_news()
+    uniq = list({x["id"]: x for x in world_items}.values())
+    stories = w.cluster(sorted(uniq, key=lambda x: x["published"], reverse=True))
     seen = set()
-    for it in sorted(world_items, key=lambda x: x["published"], reverse=True) + [dict(x, econ=True) for x in _econ_news()]:
+    for it in stories + [dict(x, econ=True, sources=1, others=[]) for x in _econ_news()]:
         if it["id"] in seen:
             continue
         seen.add(it["id"])
@@ -82,6 +89,7 @@ def monitor():
         cls = ("econ", False) if it.get("econ") else w.classify(it["title"], it.get("summary", ""))
         row = {"id": it["id"], "title": it["title"], "summary": it.get("summary", ""), "link": it["link"], "source": it["source"],
                "time": it["published"], "cat": cls[0] if cls else None, "critical": bool(cls and cls[1]),
+               "sources": it.get("sources", 1), "others": it.get("others", [])[:8],
                "iso": place.iso if place else None, "country": place.country if place else None,
                "place": place.label if place else None, "lat": place.lat if place else None, "lon": place.lon if place else None}
         if not it.get("econ"):
@@ -89,19 +97,25 @@ def monitor():
         if place and cls and (now - datetime.fromisoformat(it["published"])).total_seconds() <= 72 * 3600:
             markers.append({**row, "kind": "news"})
 
-    # 2. Calendrier : publications des 12 dernières heures et des 3 prochains jours
+    # 2. Calendrier : publications des 24 dernières heures (avec le chiffre publié et la surprise) et des 3 prochains jours
     with db.conn() as c:
-        cal = [dict(r) for r in c.execute("SELECT id,title,country,time,impact,forecast,previous FROM calendar_events WHERE time BETWEEN ? AND ? ORDER BY time",
-                                          ((now - timedelta(hours=12)).isoformat(), (now + timedelta(days=3)).isoformat()))]
+        cal = [dict(r) for r in c.execute("SELECT id,title,country,time,impact,forecast,previous,actual FROM calendar_events WHERE time BETWEEN ? AND ? ORDER BY time",
+                                          ((now - timedelta(hours=24)).isoformat(), (now + timedelta(days=3)).isoformat()))]
     for e in cal:
         loc = w.CURRENCY_PLACE.get(e["country"])
         if not loc or e["impact"] not in ("High", "Medium"):
             continue
         cat = "event" if e["impact"] == "High" else "econ"
-        markers.append(_marker(f"cal:{e['id']}", cat, "calendar", f"{e['country']} · {e['title']}", loc, time=e["time"], impact=e["impact"],
-                               forecast=e["forecast"], previous=e["previous"], source="Calendrier ForexFactory",
+        a, f = num(e["actual"]), num(e["forecast"])
+        surprise = round(a[0] - f[0], 4) if a and f and a[1] == f[1] else None
+        title = f"{e['country']} · {e['title']}" + (f" : {e['actual']}" if e["actual"] else "")
+        markers.append(_marker(f"cal:{e['id']}", cat, "calendar", title, loc, time=e["time"], impact=e["impact"],
+                               forecast=e["forecast"], previous=e["previous"], actual=e["actual"], surprise=surprise,
+                               source="Calendrier ForexFactory" + (" · résultat Nasdaq" if e["actual"] else ""),
                                summary=f"Publication {'à fort impact' if e['impact'] == 'High' else 'à impact moyen'}"
-                                       + (f" · consensus {e['forecast']}" if e["forecast"] else "") + (f" · précédent {e['previous']}" if e["previous"] else "")))
+                                       + (f" · publié {e['actual']} pour un consensus de {e['forecast']}" if e["actual"] and e["forecast"]
+                                          else f" · consensus {e['forecast']}" if e["forecast"] else "")
+                                       + (f" · précédent {e['previous']}" if e["previous"] else "")))
 
     # 3. Places financières (blanc) et mouvements de marché (orange)
     qenv = _quotes()
@@ -119,8 +133,45 @@ def monitor():
                                    summary=f"Variation de l'indice phare de {city} supérieure à {BIG_MOVE:g} % en valeur absolue."))
     bar = [{"symbol": s, "label": lab, **{k: q.get(s, {}).get(k) for k in ("price", "change", "change_pct", "time")}} for s, lab in BAR]
 
-    sources = f"RSS international ({len(WORLD_FEEDS) - len(failed)}/{len(WORLD_FEEDS)}) · ForexFactory · {prices.name}"
-    return {"data": {"markers": markers, "news": news[:150], "markets": bar, "centers": centers, "generated_at": now.isoformat(timespec="seconds")},
+    # 4. GDELT : événements marquants (marqueurs) et intensité des conflits par pays, comparée à la normale
+    names = {**w.OTHER_NAMES, **{iso: v[0] for iso, v in w.COUNTRIES.items()}}
+    for e in geo_risk.notable(hours=72):
+        names.setdefault(e["iso"], e["place"].rsplit(",", 1)[-1].strip())
+        actors = " → ".join(x.title() for x in (e["actor1"], e["actor2"]) if x)
+        label = gdelt.ROOT.get(e["root"], "Événement")
+        place = e["place"].split(",")[0] if e["precise"] else names[e["iso"]]
+        markers.append(_marker(f"gd:{e['id']}", "risk", "gdelt", f"{label} · {place}", (e["iso"], place, e["lat"], e["lon"]),
+                               time=e["time"], link=e["url"], source="GDELT", country=names[e["iso"]], articles=e["articles"], reports=e["reports"], tone=e["tone"],
+                               critical=e["root"] in gdelt.CRITICAL_ROOTS and e["articles"] >= 30,
+                               summary=(f"{actors} · " if actors else "") + f"{e['articles']} articles en {e['reports']} relevé{'s' if e['reports'] > 1 else ''} · tonalité {e['tone']:+.1f}"))
+    stats = geo_risk.country_stats(now)
+    cov = geo_risk.coverage(now)
+    gd = []
+    for iso, x in stats.items():
+        if x["conflict24"] <= 0:
+            continue
+        gd.append({**x, "name": names.get(iso, iso), "anomaly": bool(x["ratio"] and x["ratio"] >= ANOMALY and x["conflict24"] >= ANOMALY_MIN)})
+    gd.sort(key=lambda x: -x["conflict24"])
+
+    # 5. Points chauds : intensité GDELT de la zone, sujets d'actualité, actifs exposés
+    zones = []
+    for z in w.ZONES:
+        zs = [stats[i] for i in z.isos if i in stats]
+        c24, base = sum(x["conflict24"] for x in zs), sum(x["base"] or 0 for x in zs)
+        rated = [x for x in zs if x["ratio"] is not None]
+        ratio = round(sum(x["ratio"] * x["conflict24"] for x in rated) / sum(x["conflict24"] for x in rated), 2) if rated and sum(x["conflict24"] for x in rated) else None
+        top = sorted([x for x in zs if x["conflict24"]], key=lambda x: -x["conflict24"])[:4]
+        zones.append({"key": z.key, "name": z.name, "isos": list(z.isos), "lat": z.lat, "lon": z.lon, "alt": z.alt,
+                      "conflict24": c24, "base": round(base, 1), "ratio": ratio,
+                      "countries": [{"iso": x["iso"], "name": names.get(x["iso"], x["iso"]), "conflict24": x["conflict24"], "ratio": x["ratio"]} for x in top],
+                      "stories": sum(1 for n in news if n["iso"] in z.isos and n["cat"] == "risk"),
+                      "assets": [{"symbol": s_, "label": lab, "why": why, **{k: q.get(s_, {}).get(k) for k in ("price", "change_pct")}} for s_, lab, why in z.assets]})
+    zones.sort(key=lambda z: -(z["ratio"] or 0) * min(z["conflict24"], 400))
+
+    sources = f"RSS international ({len(WORLD_FEEDS) - len(failed)}/{len(WORLD_FEEDS)}) · GDELT · ForexFactory · Nasdaq · {prices.name}"
+    return {"data": {"markers": markers, "news": news[:150], "markets": bar, "centers": centers, "zones": zones,
+                     "gdelt": {"countries": gd[:120], "coverage": cov, "anomaly": ANOMALY, "anomaly_min": ANOMALY_MIN},
+                     "generated_at": now.isoformat(timespec="seconds")},
             "source": sources, "status": DELAYED, "fetched_at": min(times + [qenv["fetched_at"]]) if times else qenv["fetched_at"],
             "stale": bool(failed) or qenv["stale"], "error": ("Flux en échec : " + ", ".join(failed)) if failed else qenv["error"]}
 

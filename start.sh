@@ -1,5 +1,6 @@
 #!/bin/sh
 # Lance MARKET TERMINAL : backend (port 8000) + interface (port 3000). Ctrl+C arrête les deux.
+# Interface accessible depuis ce poste seulement ; HOST=0.0.0.0 ./start.sh pour l'ouvrir au réseau local (sans authentification).
 set -e
 cd "$(dirname "$0")"
 PY="${PYTHON:-python3.12}"
@@ -25,6 +26,8 @@ fi
 (cd backend && exec .venv/bin/uvicorn app.main:app --port 8000 --log-level warning) &
 API=$!
 trap 'kill $API 2>/dev/null' EXIT INT TERM
+HOST="${HOST:-127.0.0.1}"
 echo "→ MARKET TERMINAL : http://localhost:3000"
+[ "$HOST" = "127.0.0.1" ] || echo "⚠ Interface ouverte au réseau ($HOST) : aucune authentification, à réserver à un réseau de confiance."
 [ -n "$NO_OPEN" ] || (sleep 3 && command -v open >/dev/null && open http://localhost:3000) &
-cd frontend && npm run start --silent -- --port 3000
+cd frontend && npm run start --silent -- --port 3000 --hostname "$HOST"

@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Card, type NewsItem, Reader } from "@/components/News";
 import { Panel, SourceTag, State } from "@/components/ui";
 import { send, useApi } from "@/lib/api";
 import { dateOnly, num, pct, price, tone } from "@/lib/format";
@@ -9,7 +10,6 @@ type Quote = { symbol: string; name?: string; price?: number; change?: number; c
 type Row = { date: string } & Record<string, number | null>;
 type Bank = { area: string; bank: string; rate: number; previous: number | null; last_change: string };
 type Ev = { id: string; title: string; country: string; time: string; impact: string; forecast: string; previous: string };
-type NewsItem = { id: string; title: string; link: string; source: string; published: string; theme: string };
 type Stock = { symbol: string; name: string; sector: string; price: number | null; d1?: number | null };
 type Recap = { headline: string; mood: "risk-on" | "neutre" | "risk-off"; sections: { title: string; points: string[] }[]; watch: string[]; model: string; news_count: number };
 type Rates = { path: { month: string; implied: number }[]; current: { rate: number } | null };
@@ -20,7 +20,6 @@ const GROUPS: [string, [string, string][]][] = [
 ];
 const ZONES: Record<string, string> = { USD: "US", EUR: "EUR", GBP: "UK", JPY: "JP", CNY: "CN", CAD: "CA", AUD: "AU", NZD: "NZ", CHF: "CH" };
 const dt = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", weekday: "short", hour: "2-digit", minute: "2-digit" });
-const hm = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" });
 const sym = (s: string) => `/graphique?s=${encodeURIComponent(s)}`;
 const More = ({ href }: { href: string }) => <Link href={href} className="text-info hover:text-amber">ouvrir →</Link>;
 
@@ -31,9 +30,11 @@ export default function Accueil() {
   const y = useApi<{ nominal: Row[] }>("/api/macro/yields");
   const pol = useApi<{ banks: Bank[] }>("/api/macro/policy");
   const cal = useApi<{ events: Ev[] }>("/api/calendar", 10 * 60_000);
-  const news = useApi<{ items: NewsItem[] }>("/api/news?limit=14", 2 * 60_000);
+  const news = useApi<{ items: NewsItem[] }>("/api/news?limit=12", 2 * 60_000);
   const scr = useApi<{ rows: Stock[] }>("/api/screener?universe_id=sp500", 5 * 60_000);
   const ffr = useApi<Rates>("/api/forecasts/rates", 30 * 60_000);
+  const [open, setOpen] = useState<number | null>(null);
+  const items = news.data?.items ?? [];
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 60_000); return () => clearInterval(t); }, []);
 
@@ -94,10 +95,12 @@ export default function Accueil() {
 
       <Panel className="col-span-6" title="Dernières news" right={<><SourceTag env={news.env} /><More href="/news" /></>}>
         <State loading={news.loading && !news.data} error={news.error} />
-        <table><tbody>{news.data?.items.map((n) => (
-          <tr key={n.id}><td className="w-12 text-dim">{hm.format(new Date(n.published))}</td><td className="w-36 truncate text-info">{n.source}</td>
-            <td className="max-w-0 truncate"><a href={n.link} target="_blank" rel="noreferrer" className="hover:text-amber" title={n.title}>{n.title}</a></td></tr>))}</tbody></table>
+        <div className="grid grid-cols-1 gap-2 p-2 sm:grid-cols-2 2xl:grid-cols-3">
+          {items.map((n, i) => <Card key={n.id} n={n} isNew={false} onOpen={() => setOpen(i)} />)}
+        </div>
       </Panel>
+      {open != null && items[open] && <Reader n={items[open]} pos={`${open + 1} / ${items.length}`} onClose={() => setOpen(null)}
+        onPrev={open > 0 ? () => setOpen(open - 1) : undefined} onNext={open < items.length - 1 ? () => setOpen(open + 1) : undefined} />}
 
       <Panel className="col-span-3" title="S&P 500 · séance" right={<><span>{movers.total ? `${movers.up} en hausse / ${movers.total - movers.up} en baisse` : ""}</span><More href="/actions" /></>}>
         <State loading={scr.loading && !scr.data} error={scr.error} />

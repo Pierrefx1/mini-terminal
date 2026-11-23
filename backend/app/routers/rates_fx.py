@@ -1,16 +1,14 @@
-"""Fixed Income (courbes souveraines, crédit, inflation) et Forex (paires, volatilités, différentiels de taux)."""
+"""Fixed Income : courbes souveraines, crédit, inflation. Le forex est dans routers/fx.py."""
 import csv
 import io
-import math
 from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter
 
 from .. import config
-from ..analytics import perf_stats
-from ..cache import DELAYED, HISTORICAL, SourceError, cached
+from ..cache import HISTORICAL, SourceError, cached
 from ..providers.http import get
-from ..providers.registry import macro, policy, prices
+from ..providers.registry import macro
 from . import macro as macro_router
 
 router = APIRouter(prefix="/api", tags=["taux et change"])
@@ -86,44 +84,3 @@ def sovereign():
 @router.get("/rates/credit")
 def credit():
     return cached("rates:credit", 6 * 3600, "ICE BofA et Fed via FRED", lambda: _fred_block({**CREDIT, **INFLATION}, "2018-01-01"), status=HISTORICAL)
-
-
-# ─────────────────────────── Forex ───────────────────────────
-PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD", "EURGBP", "EURJPY", "NZDUSD", "USDCNY"]
-CCY_AREA = {"USD": "US", "EUR": "XM", "GBP": "GB", "JPY": "JP", "CHF": "CH", "CAD": "CA", "AUD": "AU", "CNY": "CN"}
-
-
-def _vol(closes: list[float], n: int) -> float | None:
-    c = closes[-(n + 1):]
-    r = [math.log(b / a) for a, b in zip(c, c[1:]) if a and b]
-    if len(r) < 2:
-        return None
-    m = sum(r) / len(r)
-    return math.sqrt(sum((x - m) ** 2 for x in r) / (len(r) - 1) * 252) * 100
-
-
-@router.get("/fx/board")
-def fx_board():
-    def fetch():
-        sp = prices.spark([f"{p}=X" for p in PAIRS], "1y", "1d")
-        rows = []
-        for p in PAIRS:
-            s = sp.get(f"{p}=X")
-            if not s:
-                rows.append({"pair": p, "error": "pas de cours reçu"})
-                continue
-            c = s["c"]
-            st = perf_stats([{"time": t, "open": x, "high": x, "low": x, "close": x, "volume": 0} for t, x in zip(s["t"], c)])
-            rows.append({"pair": p, "symbol": f"{p}=X", **{k: st.get(k) for k in ("last", "d1", "w1", "m1", "ytd", "hi52", "lo52", "range_pos")},
-                         "hv1m": _vol(c, 21), "hv3m": _vol(c, 63), "hv1y": _vol(c, 250), "spark": c[-60:]})
-        return rows
-    return cached("fx:board", 300, prices.name, fetch, status=DELAYED)
-
-
-@router.get("/fx/rates")
-def fx_rates():
-    """Taux directeurs par devise (BRI) : base du différentiel de taux et de la parité des taux couverte."""
-    p = cached("policy", 6 * 3600, policy.name, policy.policy_rates)
-    by_area = {b["area"]: b for b in p["data"]["banks"]}
-    rows = [{"ccy": c, "bank": by_area[a]["bank"], "rate": by_area[a]["rate"], "date": by_area[a]["date"]} for c, a in CCY_AREA.items() if a in by_area]
-    return {**p, "data": rows, "status": HISTORICAL}
