@@ -10,6 +10,19 @@ Terminal de marché en local, inspiré des terminaux professionnels et utilisabl
 
 13 modules : vue globale des marchés, actions et analyse fondamentale, obligataire, change (force des devises, positionnement CFTC, corrélations), matières premières (courbes à terme, spreads, stocks EIA, positionnement CFTC), options et pricer, économie, actualités, recherche, valorisation DCF, portefeuilles, risque (VaR, stress tests), messagerie. Plus des alertes et l'export Excel.
 
+![World Monitor : globe des risques géopolitiques, points chauds et actifs exposés](docs/captures/world-monitor.png)
+
+<table>
+<tr>
+<td width="50%"><img src="docs/captures/vol.png" alt="Surface de volatilité implicite (VOL)"><br><sub><b>VOL</b> · surface de volatilité implicite 3D, smile, structure par terme, IV vs vol réalisée</sub></td>
+<td width="50%"><img src="docs/captures/donnees-pays.png" alt="Données pays (DATA)"><br><sub><b>DATA</b> · carte du monde par indicateur, fiche pays, comparaisons historiques</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/captures/graphique.png" alt="Graphique (GP)"><br><sub><b>GP</b> · graphique de 1 min à 1 mois, indicateurs techniques, comparaison</sub></td>
+<td width="50%"><img src="docs/captures/risque.png" alt="Risque (RISK)"><br><sub><b>RISK</b> · VaR et ES, Monte Carlo, corrélations, stress tests, scénarios de chocs</sub></td>
+</tr>
+</table>
+
 Documentation : [architecture](docs/ARCHITECTURE.md) · [les 13 modules, leurs sources et leurs limites](docs/MVP.md)
 
 ## Lancer
