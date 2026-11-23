@@ -4,7 +4,8 @@ export type SourceRow = {
   source: string; last_ok: string | null; last_error_at: string | null; last_error: string | null;
   ok_count: number; err_count: number; last_ms: number | null; streak: number; down_since: string | null;
 };
-export type SourcesResp = { sources: SourceRow[]; now: string };
+export type Retry = { key: string; source: string; attempts: number; next_in_s: number };
+export type SourcesResp = { sources: SourceRow[]; retries?: Retry[]; now: string };
 
 /** Échecs consécutifs à partir desquels une source est « en panne » (et non victime d'un raté passager). */
 export const DOWN_STREAK = 3;

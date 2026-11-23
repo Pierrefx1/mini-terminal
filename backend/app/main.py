@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 
-from . import config, db, geo_risk
+from . import cache, config, db, geo_risk
 from .cache import record_health
 from .routers import (analysis, calendar, collab, commodities, crypto, data, forecasts, fx, macro, market, news, overview,
                       portfolio, rates_fx, recap, screener, vol, world)
@@ -57,7 +57,7 @@ def sources():
     """État de chaque source : dernier succès, dernière erreur, compteurs depuis la création de la base."""
     with db.conn() as c:
         rows = [dict(r) for r in c.execute("SELECT * FROM source_health ORDER BY source")]
-    return {"sources": rows, "now": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    return {"sources": rows, "retries": cache.pending_retries(), "now": datetime.now(timezone.utc).isoformat(timespec="seconds")}
 
 
 @app.get("/api/status")

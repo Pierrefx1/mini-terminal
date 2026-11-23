@@ -18,6 +18,8 @@ export default function SRC() {
           <thead><tr><th>État</th><th>Source</th><th>Dernier succès</th><th>Dernier échec</th><th className="num">Succès</th><th className="num">Échecs</th><th className="num">Taux d&apos;échec</th><th className="num">Durée</th><th>Modules touchés</th><th>Dernière erreur</th></tr></thead>
           <tbody>{rows.map((r) => {
             const ko = failing(r), dn = down(r, data!.now);
+            const rt = (data!.retries ?? []).filter((x) => x.source === r.source);
+            const nextIn = rt.length ? Math.min(...rt.map((x) => x.next_in_s)) : null;
             const rate = r.ok_count + r.err_count ? (r.err_count / (r.ok_count + r.err_count)) * 100 : 0;
             return <tr key={r.source}>
               <td><span className={`border px-1 text-[9px] ${dn ? "border-down bg-down text-black" : ko ? "border-down text-down" : "border-up text-up"}`}
@@ -29,14 +31,17 @@ export default function SRC() {
               <td className={`num ${rate > 20 ? "text-down" : rate > 5 ? "text-amber" : ""}`}>{num(rate, 0)} %</td>
               <td className="num">{r.last_ms == null ? "–" : r.last_ms >= 1000 ? `${num(r.last_ms / 1000, 1)} s` : `${r.last_ms} ms`}</td>
               <td className={`max-w-[34ch] truncate ${ko ? "text-fg/80" : "text-dim"}`} title={impact(r.source).modules}>{impact(r.source).modules}</td>
-              <td className="max-w-[40ch] truncate text-dim" title={r.last_error ?? undefined}>{ko ? r.last_error : ""}</td>
+              <td className="max-w-[40ch] truncate text-dim" title={r.last_error ?? undefined}>
+                {ko && nextIn != null && <span className="mr-1 text-amber" title={`${rt.length} appel${rt.length > 1 ? "s" : ""} en attente de reprise automatique`}>↻ {nextIn < 60 ? `${nextIn} s` : `${Math.round(nextIn / 60)} min`}</span>}
+                {ko ? r.last_error : ""}</td>
             </tr>;
           })}</tbody>
         </table>}
         <div className="px-2 py-1 text-[10px] text-dim">
           Chaque appel réel à une source (hors lecture du cache) est compté. ÉCHEC : le dernier appel a échoué ; les modules affichent alors la dernière valeur connue marquée PÉRIMÉ.
           PANNE : au moins {DOWN_STREAK} échecs d&apos;affilée, le dernier datant de moins de 24 h ; un bandeau le signale alors sur tous les modules.
-          Une réponse explicite de la source (ticker sans options, clé manquante) compte comme un succès. Rafraîchi toutes les 30 s.
+          Une réponse explicite de la source (ticker sans options, clé manquante) compte comme un succès. ↻ : prochain essai automatique
+          (délai croissant de 1 à 15 min, sans attendre la réouverture d&apos;un écran). Rafraîchi toutes les 30 s.
         </div>
       </Panel>
     </div>
